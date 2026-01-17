@@ -124,7 +124,7 @@ const RestaurantDetails = () => {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => navigate(-1)}
+          onClick={() => navigate('/')}
           className="absolute top-4 right-4 bg-white/20 backdrop-blur-sm text-white hover:bg-white/30"
         >
           <ArrowRight className="w-5 h-5" />
