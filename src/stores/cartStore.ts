@@ -11,6 +11,8 @@ export interface CartItem {
   size?: string;
   categoryId?: string;
   categoryName?: string;
+  restaurantId?: string;
+  restaurantName?: string;
 }
 
 interface CartState {

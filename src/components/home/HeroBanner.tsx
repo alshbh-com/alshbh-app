@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { MapPin, Search } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
 
 export const HeroBanner = () => {
   return (
@@ -19,23 +19,21 @@ export const HeroBanner = () => {
           className="text-center text-primary-foreground"
         >
           <h1 className="text-3xl md:text-4xl font-bold mb-2">
-            أهلاً بك في الشبه
+            أهلاً بك في الشبح
           </h1>
           <p className="text-lg opacity-90 mb-6">
             اطلب أكلك المفضل من أفضل المطاعم في كفر شكر
           </p>
 
           {/* Search Bar */}
-          <div className="max-w-md mx-auto">
+          <Link to="/search" className="block max-w-md mx-auto">
             <div className="relative">
               <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="ابحث عن مطعم أو وجبة..."
-                className="w-full h-12 pr-12 pl-4 rounded-xl bg-background text-foreground border-0 focus:ring-2 focus:ring-background/50 shadow-elevated"
-              />
+              <div className="w-full h-12 pr-12 pl-4 rounded-xl bg-background text-muted-foreground border-0 shadow-elevated flex items-center">
+                ابحث عن مطعم أو وجبة...
+              </div>
             </div>
-          </div>
+          </Link>
 
           {/* Location */}
           <motion.div

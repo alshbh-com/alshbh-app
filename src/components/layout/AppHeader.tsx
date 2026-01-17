@@ -35,7 +35,7 @@ export const AppHeader = ({ onMenuClick, showSearch = true }: AppHeaderProps) =>
           >
             <span className="text-xl font-bold text-primary-foreground">ش</span>
           </motion.div>
-          <span className="text-xl font-bold text-gradient hidden sm:block">الشبه</span>
+          <span className="text-xl font-bold text-gradient hidden sm:block">الشبح</span>
         </Link>
 
         {/* Search - Desktop */}
