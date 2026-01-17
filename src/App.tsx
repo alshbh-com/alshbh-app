@@ -8,13 +8,20 @@ import Cart from "./pages/Cart";
 import Restaurants from "./pages/Restaurants";
 import Favorites from "./pages/Favorites";
 import Profile from "./pages/Profile";
+import RestaurantDetails from "./pages/RestaurantDetails";
+import Checkout from "./pages/Checkout";
+import Orders from "./pages/Orders";
+import Addresses from "./pages/Addresses";
+import Settings from "./pages/Settings";
+import Privacy from "./pages/Privacy";
+import Search from "./pages/Search";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      gcTime: 1000 * 60 * 30, // 30 minutes (previously cacheTime)
+      staleTime: 1000 * 60 * 5,
+      gcTime: 1000 * 60 * 30,
       retry: 1,
     },
   },
@@ -29,10 +36,16 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/cart" element={<Cart />} />
+          <Route path="/checkout" element={<Checkout />} />
           <Route path="/restaurants" element={<Restaurants />} />
+          <Route path="/restaurant/:id" element={<RestaurantDetails />} />
           <Route path="/favorites" element={<Favorites />} />
           <Route path="/profile" element={<Profile />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="/orders" element={<Orders />} />
+          <Route path="/addresses" element={<Addresses />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/search" element={<Search />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

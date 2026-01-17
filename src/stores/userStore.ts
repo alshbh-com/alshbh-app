@@ -1,25 +1,22 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-interface UserInfo {
+interface UserState {
   name: string;
   phone: string;
-  city: string;
-  address?: string;
-}
-
-interface UserState {
-  user: UserInfo | null;
-  setUser: (user: UserInfo) => void;
+  address: string;
+  setUserInfo: (name: string, phone: string, address: string) => void;
   clearUser: () => void;
 }
 
 export const useUserStore = create<UserState>()(
   persist(
     (set) => ({
-      user: null,
-      setUser: (user) => set({ user }),
-      clearUser: () => set({ user: null }),
+      name: '',
+      phone: '',
+      address: '',
+      setUserInfo: (name, phone, address) => set({ name, phone, address }),
+      clearUser: () => set({ name: '', phone: '', address: '' }),
     }),
     {
       name: 'alshbh-user',

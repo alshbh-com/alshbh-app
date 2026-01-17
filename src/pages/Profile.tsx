@@ -13,7 +13,7 @@ const menuItems = [
 ];
 
 const Profile = () => {
-  const { user } = useUserStore();
+  const { name, phone } = useUserStore();
 
   return (
     <AppLayout>
@@ -30,12 +30,12 @@ const Profile = () => {
             </div>
             <div>
               <h1 className="text-xl font-bold">
-                {user?.name || 'مرحباً بك'}
+                {name || 'مرحباً بك'}
               </h1>
-              {user?.phone && (
+              {phone && (
                 <p className="opacity-90 flex items-center gap-1 mt-1">
                   <Phone className="w-4 h-4" />
-                  {user.phone}
+                  {phone}
                 </p>
               )}
             </div>
@@ -97,7 +97,7 @@ const Profile = () => {
 
         {/* Version */}
         <p className="text-center text-sm text-muted-foreground mt-8">
-          الشبه - الإصدار 1.0.0
+          الشبح - الإصدار 1.0.0
         </p>
       </div>
     </AppLayout>
