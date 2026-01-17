@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 
-const ADMIN_PASSWORD = 'admin123'; // In production, this should be handled securely
+const ADMIN_PASSWORD = '01278006248@01204486263'; // In production, this should be handled securely
 const MAX_ATTEMPTS = 3;
 const LOCKOUT_TIME = 5 * 60 * 1000; // 5 minutes
 

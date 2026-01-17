@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, MapPin, Phone, User, FileText, Send } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { ArrowRight, MapPin, Phone, User, FileText, Send, ChevronDown } from 'lucide-react';
 import { useCartStore } from '@/stores/cartStore';
 import { useUserStore } from '@/stores/userStore';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -20,10 +28,26 @@ const Checkout = () => {
     phone: phone || '',
     address: address || '',
     notes: '',
+    cityId: '',
   });
   const [loading, setLoading] = useState(false);
 
-  const deliveryFee = 10;
+  // Fetch cities
+  const { data: cities } = useQuery({
+    queryKey: ['checkout-cities'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('allowed_cities')
+        .select('*')
+        .eq('is_active', true)
+        .order('name', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const selectedCity = cities?.find(c => c.id === formData.cityId);
+  const deliveryFee = selectedCity?.delivery_price || 0;
   const total = getTotal() + deliveryFee;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -33,7 +57,7 @@ const Checkout = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.phone || !formData.address) {
+    if (!formData.name || !formData.phone || !formData.cityId) {
       toast.error('يرجى ملء جميع البيانات المطلوبة');
       return;
     }
@@ -49,20 +73,21 @@ const Checkout = () => {
       // Save user info
       setUserInfo(formData.name, formData.phone, formData.address);
 
-      // Group items by restaurant
-      const restaurantItems: Record<string, typeof items> = {};
-      items.forEach((item) => {
-        if (!restaurantItems[item.restaurantId]) {
-          restaurantItems[item.restaurantId] = [];
-        }
-        restaurantItems[item.restaurantId].push(item);
-      });
+      // Get order number
+      const { data: ordersCount } = await supabase
+        .from('orders')
+        .select('id', { count: 'exact', head: true });
+
+      const orderNumber = (ordersCount?.length || 0) + 1;
 
       // Create order message for WhatsApp
-      let message = `🍽️ *طلب جديد من الشبح*\n\n`;
+      let message = `🍽️ *طلب جديد من الشبح - #${orderNumber}*\n\n`;
       message += `👤 *الاسم:* ${formData.name}\n`;
       message += `📱 *الهاتف:* ${formData.phone}\n`;
-      message += `📍 *العنوان:* ${formData.address}\n`;
+      message += `📍 *المنطقة:* ${selectedCity?.name || 'غير محدد'}\n`;
+      if (formData.address) {
+        message += `🏠 *العنوان:* ${formData.address}\n`;
+      }
       if (formData.notes) {
         message += `📝 *ملاحظات:* ${formData.notes}\n`;
       }
@@ -85,7 +110,7 @@ const Checkout = () => {
       const orderData = {
         customer_name: formData.name,
         customer_phone: formData.phone,
-        customer_city: formData.address,
+        customer_city: selectedCity?.name || '',
         customer_location: formData.address,
         items: items.map((item) => ({
           name: item.name,
@@ -171,7 +196,7 @@ const Checkout = () => {
               </div>
               <div className="flex justify-between text-sm">
                 <span>رسوم التوصيل</span>
-                <span>{deliveryFee} ج.م</span>
+                <span>{deliveryFee > 0 ? `${deliveryFee} ج.م` : 'اختر المنطقة'}</span>
               </div>
               <div className="flex justify-between font-bold text-lg mt-2">
                 <span>الإجمالي</span>
@@ -216,15 +241,40 @@ const Checkout = () => {
             />
           </div>
 
+          {/* City Selection */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center gap-2">
+              <MapPin className="w-4 h-4" />
+              اختر المنطقة *
+            </label>
+            <Select
+              value={formData.cityId}
+              onValueChange={(value) => setFormData({ ...formData, cityId: value })}
+            >
+              <SelectTrigger className="h-12 rounded-xl">
+                <SelectValue placeholder="اختر منطقتك" />
+              </SelectTrigger>
+              <SelectContent>
+                {cities?.map((city) => (
+                  <SelectItem key={city.id} value={city.id}>
+                    <div className="flex items-center justify-between w-full">
+                      <span>{city.name}</span>
+                      <span className="text-primary mr-4">توصيل: {city.delivery_price} ج.م</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="relative">
             <MapPin className="absolute right-3 top-3 w-5 h-5 text-muted-foreground" />
             <Textarea
               name="address"
-              placeholder="العنوان بالتفصيل *"
+              placeholder="العنوان بالتفصيل (اختياري)"
               value={formData.address}
               onChange={handleChange}
               className="pr-10 min-h-[100px] rounded-xl resize-none"
-              required
             />
           </div>
 
@@ -242,7 +292,7 @@ const Checkout = () => {
           <Button
             type="submit"
             className="w-full h-14 text-lg rounded-xl"
-            disabled={loading}
+            disabled={loading || !formData.cityId}
           >
             {loading ? (
               <span className="flex items-center gap-2">
