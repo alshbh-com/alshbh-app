@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { MapPin, ChevronLeft, Store, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { DistrictMap3D } from '@/components/3d/DistrictMap3D';
+import { DistrictMap3D, District as Map3DDistrict, Village as Map3DVillage } from '@/components/3d/DistrictMap3D';
 import { RestaurantStorefront3D } from '@/components/3d/RestaurantStorefront3D';
 import { FloatingCart3D, FloatingCartButton } from '@/components/3d/FloatingCart3D';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -22,6 +22,9 @@ interface District {
   is_active: boolean;
   latitude?: number;
   longitude?: number;
+  restaurants_count?: number;
+  position?: [number, number, number];
+  color?: string;
 }
 
 interface Village {
@@ -31,6 +34,7 @@ interface Village {
   name_en?: string;
   delivery_fee: number;
   is_active: boolean;
+  position?: [number, number, number];
 }
 
 interface Restaurant {
@@ -64,6 +68,7 @@ export function DistrictSelectionPage() {
         const location = JSON.parse(saved);
         setSelectedVillage(location.village);
         setSelectedDistrict(location.district);
+        setShowRestaurants(true);
       } catch (e) {
         console.error('Failed to parse saved location');
       }
@@ -95,16 +100,17 @@ export function DistrictSelectionPage() {
         }
       });
       
+      const colors = ['#f97316', '#22c55e', '#6366f1', '#ec4899', '#fbbf24'];
+      
       return (districtData || []).map((d, index) => ({
         ...d,
         restaurants_count: counts[d.id] || 0,
-        // Position in 3D space (circular arrangement)
         position: [
-          Math.cos((index / (districtData?.length || 1)) * Math.PI * 2) * 8,
+          Math.cos((index / Math.max(districtData?.length || 1, 1)) * Math.PI * 2) * 8,
           0,
-          Math.sin((index / (districtData?.length || 1)) * Math.PI * 2) * 8
+          Math.sin((index / Math.max(districtData?.length || 1, 1)) * Math.PI * 2) * 8
         ] as [number, number, number],
-        color: ['#f97316', '#22c55e', '#6366f1', '#ec4899', '#fbbf24'][index % 5]
+        color: colors[index % colors.length]
       }));
     },
   });
@@ -126,9 +132,9 @@ export function DistrictSelectionPage() {
       return (data || []).map((v, index) => ({
         ...v,
         position: [
-          Math.cos((index / (data?.length || 1)) * Math.PI * 2) * 5,
+          Math.cos((index / Math.max(data?.length || 1, 1)) * Math.PI * 2) * 5,
           1,
-          Math.sin((index / (data?.length || 1)) * Math.PI * 2) * 5
+          Math.sin((index / Math.max(data?.length || 1, 1)) * Math.PI * 2) * 5
         ] as [number, number, number]
       }));
     },
@@ -153,25 +159,26 @@ export function DistrictSelectionPage() {
     enabled: !!selectedDistrict && showRestaurants,
   });
 
-  const handleSelectDistrict = (district: District) => {
-    setSelectedDistrict(district);
-    setShowVillageModal(true);
+  const handleSelectDistrict = (district: Map3DDistrict) => {
+    const fullDistrict = districts?.find(d => d.id === district.id);
+    if (fullDistrict) {
+      setSelectedDistrict(fullDistrict);
+      setShowVillageModal(true);
+    }
   };
 
-  const handleSelectVillage = (village: Village) => {
-    setSelectedVillage(village);
-    // Save to localStorage
-    localStorage.setItem(LOCATION_KEY, JSON.stringify({
-      district: selectedDistrict,
-      village: village
-    }));
-    setShowVillageModal(false);
-    setShowRestaurants(true);
-    toast.success(`تم اختيار ${village.name} - التوصيل: ${village.delivery_fee} ج.م`);
-  };
-
-  const handleSelectRestaurant = (restaurant: Restaurant) => {
-    navigate(`/restaurant/${restaurant.id}`);
+  const handleSelectVillage = (village: Map3DVillage) => {
+    const fullVillage = villages?.find(v => v.id === village.id);
+    if (fullVillage) {
+      setSelectedVillage(fullVillage);
+      localStorage.setItem(LOCATION_KEY, JSON.stringify({
+        district: selectedDistrict,
+        village: fullVillage
+      }));
+      setShowVillageModal(false);
+      setShowRestaurants(true);
+      toast.success(`تم اختيار ${fullVillage.name} - التوصيل: ${fullVillage.delivery_fee} ج.م`);
+    }
   };
 
   const handleChangeVillage = () => {
@@ -186,7 +193,7 @@ export function DistrictSelectionPage() {
   };
 
   // If we have a saved location, show restaurants directly
-  if (selectedVillage && !showVillageModal) {
+  if (selectedVillage && showRestaurants && !showVillageModal) {
     return (
       <AppLayout showSearch={false}>
         <div className="container py-4 px-4">
@@ -269,7 +276,15 @@ export function DistrictSelectionPage() {
           district={selectedDistrict}
           villages={villages || []}
           loading={loadingVillages}
-          onSelectVillage={handleSelectVillage}
+          onSelectVillage={(v) => {
+            setSelectedVillage(v);
+            localStorage.setItem(LOCATION_KEY, JSON.stringify({
+              district: selectedDistrict,
+              village: v
+            }));
+            setShowVillageModal(false);
+            toast.success(`تم اختيار ${v.name} - التوصيل: ${v.delivery_fee} ج.م`);
+          }}
         />
       </AppLayout>
     );
@@ -300,10 +315,10 @@ export function DistrictSelectionPage() {
             selectedDistrict={selectedDistrict}
             villages={(villages || []).map((v, i) => ({
               ...v,
-              position: [
-                Math.cos((i / (villages?.length || 1)) * Math.PI * 2) * 5,
+              position: v.position || [
+                Math.cos((i / Math.max(villages?.length || 1, 1)) * Math.PI * 2) * 5,
                 1,
-                Math.sin((i / (villages?.length || 1)) * Math.PI * 2) * 5
+                Math.sin((i / Math.max(villages?.length || 1, 1)) * Math.PI * 2) * 5
               ] as [number, number, number]
             }))}
             onSelectDistrict={handleSelectDistrict}
@@ -329,7 +344,16 @@ export function DistrictSelectionPage() {
           district={selectedDistrict}
           villages={villages || []}
           loading={loadingVillages}
-          onSelectVillage={handleSelectVillage}
+          onSelectVillage={(v) => {
+            setSelectedVillage(v);
+            localStorage.setItem(LOCATION_KEY, JSON.stringify({
+              district: selectedDistrict,
+              village: v
+            }));
+            setShowVillageModal(false);
+            setShowRestaurants(true);
+            toast.success(`تم اختيار ${v.name} - التوصيل: ${v.delivery_fee} ج.م`);
+          }}
         />
       </div>
     </AppLayout>
