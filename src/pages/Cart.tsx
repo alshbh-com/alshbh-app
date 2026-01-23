@@ -1,13 +1,50 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useCartStore } from '@/stores/cartStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingBag, MapPin, Navigation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+
+interface SavedLocation {
+  district: {
+    id: string;
+    name: string;
+  };
+  village: {
+    id: string;
+    name: string;
+    deliveryFee: number;
+  };
+}
+
+const PLATFORM_FEE = 10; // رسوم المنصة الثابتة
 
 const Cart = () => {
+  const navigate = useNavigate();
   const { items, updateQuantity, removeItem, getTotal, clearCart } = useCartStore();
+  const [location, setLocation] = useState<SavedLocation | null>(null);
   const total = getTotal();
+
+  // Load saved location
+  useEffect(() => {
+    const savedLocation = localStorage.getItem('alshbh_selected_location');
+    if (savedLocation) {
+      try {
+        setLocation(JSON.parse(savedLocation));
+      } catch (e) {
+        console.error('Failed to parse saved location');
+      }
+    }
+  }, []);
+
+  const deliveryFee = location?.village?.deliveryFee || 0;
+  const grandTotal = total + deliveryFee + PLATFORM_FEE;
+
+  const handleChangeLocation = () => {
+    localStorage.removeItem('alshbh_selected_location');
+    navigate('/');
+  };
 
   return (
     <AppLayout>
@@ -19,6 +56,50 @@ const Cart = () => {
         >
           سلة المشتريات
         </motion.h1>
+
+        {/* Location Card - Always Show */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-br from-primary/10 to-accent/10 rounded-2xl p-4 mb-6 border border-primary/20"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
+                <MapPin className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">التوصيل إلى</p>
+                {location ? (
+                  <>
+                    <p className="font-bold">{location.village.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {location.district.name}
+                    </p>
+                  </>
+                ) : (
+                  <p className="font-bold text-destructive">لم يتم تحديد الموقع</p>
+                )}
+              </div>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleChangeLocation}
+              className="gap-2"
+            >
+              <Navigation className="w-4 h-4" />
+              تغيير
+            </Button>
+          </div>
+          
+          {location && (
+            <div className="mt-3 pt-3 border-t border-primary/20 flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">رسوم التوصيل</span>
+              <span className="font-bold text-primary">{deliveryFee} ج.م</span>
+            </div>
+          )}
+        </motion.div>
 
         {items.length === 0 ? (
           <motion.div
@@ -33,7 +114,7 @@ const Cart = () => {
             <p className="text-muted-foreground mb-6">
               لم تضف أي منتجات بعد
             </p>
-            <Link to="/">
+            <Link to="/home">
               <Button size="lg">تصفح المطاعم</Button>
             </Link>
           </motion.div>
@@ -118,17 +199,24 @@ const Cart = () => {
               animate={{ opacity: 1, y: 0 }}
               className="bg-card rounded-2xl p-4 shadow-soft mt-6"
             >
-              <div className="flex justify-between items-center mb-2">
+              <div className="flex justify-between items-center mb-3">
                 <span className="text-muted-foreground">المجموع</span>
-                <span className="font-bold">{total} جنيه</span>
+                <span className="font-bold">{total} ج.م</span>
               </div>
+              
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-muted-foreground">رسوم التوصيل ({location?.village?.name || 'غير محدد'})</span>
+                <span className="font-bold text-primary">{deliveryFee} ج.م</span>
+              </div>
+              
               <div className="flex justify-between items-center mb-4">
-                <span className="text-muted-foreground">التوصيل</span>
-                <span className="text-sm text-muted-foreground">يُحدد عند الطلب</span>
+                <span className="text-muted-foreground">رسوم المنصة</span>
+                <span className="font-medium">{PLATFORM_FEE} ج.م</span>
               </div>
+              
               <div className="border-t pt-4 flex justify-between items-center">
                 <span className="font-bold text-lg">الإجمالي</span>
-                <span className="font-bold text-xl text-primary">{total} جنيه</span>
+                <span className="font-bold text-2xl text-primary">{grandTotal} ج.م</span>
               </div>
             </motion.div>
 
@@ -142,8 +230,12 @@ const Cart = () => {
                 إفراغ السلة
               </Button>
               <Link to="/checkout" className="flex-1">
-                <Button className="w-full" size="lg">
-                  إتمام الطلب
+                <Button 
+                  className="w-full" 
+                  size="lg"
+                  disabled={!location}
+                >
+                  {location ? 'إتمام الطلب' : 'حدد موقعك أولاً'}
                 </Button>
               </Link>
             </div>
