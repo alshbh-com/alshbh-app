@@ -1497,6 +1497,7 @@ export type Database = {
       }
     }
     Functions: {
+      delete_old_orders: { Args: never; Returns: undefined }
       generate_shared_code: { Args: never; Returns: string }
     }
     Enums: {

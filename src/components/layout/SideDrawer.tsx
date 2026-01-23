@@ -13,6 +13,7 @@ import {
   User,
   ClipboardList,
   Lock,
+  HelpCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -33,6 +34,7 @@ const menuItems = [
 
 const settingsItems = [
   { title: 'الإعدادات', href: '/settings', icon: Settings },
+  { title: 'الأسئلة الشائعة', href: '/faq', icon: HelpCircle },
   { title: 'سياسة الخصوصية', href: '/privacy', icon: Shield },
   { title: 'لوحة التحكم', href: '/admin', icon: Lock },
 ];

@@ -1,12 +1,15 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import { motion } from 'framer-motion';
-import { User, Phone, MapPin, FileText, Shield, LogOut, ChevronLeft, Settings } from 'lucide-react';
+import { User, Phone, MapPin, FileText, Shield, ChevronLeft, Settings, Edit, TrendingUp, Award } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { useUserStore } from '@/stores/userStore';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 const menuItems = [
   { icon: FileText, label: 'طلباتي', path: '/orders', description: 'تتبع طلباتك السابقة' },
+  { icon: TrendingUp, label: 'إحصائياتي', path: '/my-stats', description: 'عرض إحصائيات طلباتك' },
   { icon: MapPin, label: 'عناويني', path: '/addresses', description: 'إدارة عناوين التوصيل' },
   { icon: Settings, label: 'الإعدادات', path: '/settings', description: 'تخصيص التطبيق' },
   { icon: Shield, label: 'سياسة الخصوصية', path: '/privacy', description: 'معلومات الخصوصية' },
@@ -14,6 +17,29 @@ const menuItems = [
 
 const Profile = () => {
   const { name, phone } = useUserStore();
+
+  // Fetch loyalty points
+  const { data: loyaltyData } = useQuery({
+    queryKey: ['loyalty-points', phone],
+    queryFn: async () => {
+      if (!phone) return { points: 0, level: 'مبتدئ' };
+      
+      const { data: orders } = await supabase
+        .from('orders')
+        .select('total_amount')
+        .eq('customer_phone', phone);
+
+      const totalSpent = orders?.reduce((sum, o) => sum + (o.total_amount || 0), 0) || 0;
+      const points = Math.floor(totalSpent / 10);
+      
+      const level = points >= 500 ? 'ذهبي' :
+                   points >= 200 ? 'فضي' :
+                   points >= 50 ? 'برونزي' : 'مبتدئ';
+
+      return { points, level };
+    },
+    enabled: !!phone,
+  });
 
   return (
     <AppLayout>
@@ -28,7 +54,7 @@ const Profile = () => {
             <div className="w-16 h-16 rounded-full bg-primary-foreground/20 flex items-center justify-center">
               <User className="w-8 h-8" />
             </div>
-            <div>
+            <div className="flex-1">
               <h1 className="text-xl font-bold">
                 {name || 'مرحباً بك'}
               </h1>
@@ -39,8 +65,41 @@ const Profile = () => {
                 </p>
               )}
             </div>
+            <Link to="/edit-profile">
+              <Button size="icon" variant="ghost" className="bg-white/20 hover:bg-white/30">
+                <Edit className="w-5 h-5" />
+              </Button>
+            </Link>
           </div>
+
+          {/* Loyalty Badge */}
+          {phone && loyaltyData && (
+            <div className="mt-4 pt-4 border-t border-white/20 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Award className="w-5 h-5" />
+                <span className="font-medium">مستوى {loyaltyData.level}</span>
+              </div>
+              <span className="text-sm opacity-90">{loyaltyData.points} نقطة</span>
+            </div>
+          )}
         </motion.div>
+
+        {/* Quick Actions */}
+        {!phone && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="mb-6"
+          >
+            <Link to="/edit-profile">
+              <Button className="w-full gap-2">
+                <Edit className="w-4 h-4" />
+                أضف بياناتك لتفعيل المميزات
+              </Button>
+            </Link>
+          </motion.div>
+        )}
 
         {/* Menu Items */}
         <div className="space-y-3">
