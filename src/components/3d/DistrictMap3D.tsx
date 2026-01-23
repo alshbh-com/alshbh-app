@@ -70,7 +70,7 @@ function DistrictLandmark({
   
   return (
     <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
-      <group position={district.position}>
+      <group position={pos}>
         {/* Main landmark - Building shape */}
         <mesh
           ref={meshRef}
@@ -81,7 +81,7 @@ function DistrictLandmark({
         >
           <boxGeometry args={[1.5, 2.5, 1.5]} />
           <MeshDistortMaterial
-            color={isSelected ? '#f97316' : district.color}
+            color={isSelected ? '#f97316' : col}
             emissive={hovered ? '#f97316' : '#000000'}
             emissiveIntensity={hovered ? 0.5 : 0}
             distort={0.2}
@@ -216,7 +216,7 @@ function CameraController({ selectedDistrict }: { selectedDistrict: District | n
   const { camera } = useThree();
   
   useFrame(() => {
-    if (selectedDistrict) {
+    if (selectedDistrict && selectedDistrict.position) {
       const target = new THREE.Vector3(...selectedDistrict.position);
       target.y += 5;
       target.z += 8;
