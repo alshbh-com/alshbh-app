@@ -13,11 +13,16 @@ import { supabase } from '@/integrations/supabase/client';
 const PLATFORM_FEE_PER_ITEM = 10; // 10 EGP per item
 
 interface SavedLocation {
-  districtId: string;
-  districtName: string;
-  villageId: string;
-  villageName: string;
-  deliveryFee: number;
+  district: {
+    id: string;
+    name: string;
+    whatsappNumber?: string;
+  };
+  village: {
+    id: string;
+    name: string;
+    deliveryFee: number;
+  };
 }
 
 const Checkout = () => {
@@ -46,7 +51,7 @@ const Checkout = () => {
     }
   }, []);
 
-  const deliveryFee = savedLocation?.deliveryFee || 0;
+  const deliveryFee = savedLocation?.village?.deliveryFee || 0;
   const platformFee = getItemCount() * PLATFORM_FEE_PER_ITEM;
   const subtotal = getTotal();
   const total = subtotal + deliveryFee + platformFee;
@@ -96,8 +101,8 @@ const Checkout = () => {
       let message = `🍽️ *طلب جديد من الشبح - #${orderNumber}*\n\n`;
       message += `👤 *الاسم:* ${formData.name}\n`;
       message += `📱 *الهاتف:* ${formData.phone}\n`;
-      message += `📍 *المركز:* ${savedLocation.districtName}\n`;
-      message += `🏘️ *القرية:* ${savedLocation.villageName}\n`;
+      message += `📍 *المركز:* ${savedLocation.district.name}\n`;
+      message += `🏘️ *القرية:* ${savedLocation.village.name}\n`;
       if (formData.address) {
         message += `🏠 *العنوان:* ${formData.address}\n`;
       }
@@ -116,7 +121,7 @@ const Checkout = () => {
 
       message += `\n━━━━━━━━━━━━━━━\n`;
       message += `💰 *المجموع:* ${subtotal} ج.م\n`;
-      message += `🚚 *التوصيل (${savedLocation.villageName}):* ${deliveryFee} ج.م\n`;
+      message += `🚚 *التوصيل (${savedLocation.village.name}):* ${deliveryFee} ج.م\n`;
       message += `📦 *رسوم المنصة (${getItemCount()} قطعة × 10):* ${platformFee} ج.م\n`;
       message += `💵 *الإجمالي:* ${total} ج.م`;
 
@@ -124,11 +129,11 @@ const Checkout = () => {
       const orderData = {
         customer_name: formData.name,
         customer_phone: formData.phone,
-        customer_city: savedLocation.districtName,
-        district_id: savedLocation.districtId,
-        district_name: savedLocation.districtName,
-        village_id: savedLocation.villageId,
-        village_name: savedLocation.villageName,
+        customer_city: savedLocation.district.name,
+        district_id: savedLocation.district.id,
+        district_name: savedLocation.district.name,
+        village_id: savedLocation.village.id,
+        village_name: savedLocation.village.name,
         customer_location: formData.address,
         items: items.map((item) => ({
           name: item.name,
@@ -148,8 +153,8 @@ const Checkout = () => {
         console.error('Error saving order:', error);
       }
 
-      // Open WhatsApp
-      const whatsappNumber = '201278006248';
+      // Open WhatsApp - use district whatsapp number or fallback to default
+      const whatsappNumber = savedLocation.district.whatsappNumber || '201278006248';
       const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
       window.open(whatsappUrl, '_blank');
 
@@ -218,8 +223,8 @@ const Checkout = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">التوصيل إلى</p>
-                <p className="font-bold text-lg">{savedLocation.districtName}</p>
-                <p className="text-primary font-medium">{savedLocation.villageName}</p>
+                <p className="font-bold text-lg">{savedLocation.district.name}</p>
+                <p className="text-primary font-medium">{savedLocation.village.name}</p>
                 <p className="text-sm text-muted-foreground mt-1">
                   سعر التوصيل: <span className="font-bold text-foreground">{deliveryFee} ج.م</span>
                 </p>
@@ -254,7 +259,7 @@ const Checkout = () => {
                 <span>{subtotal} ج.م</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span>التوصيل ({savedLocation.villageName})</span>
+                <span>التوصيل ({savedLocation.village.name})</span>
                 <span className="text-primary font-medium">{deliveryFee} ج.م</span>
               </div>
               <div className="flex justify-between text-sm">

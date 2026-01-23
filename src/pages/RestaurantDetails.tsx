@@ -8,6 +8,7 @@ import { useCartStore } from '@/stores/cartStore';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
+import { FloatingCartButton } from '@/components/FloatingCartButton';
 
 interface Product {
   id: string;
@@ -110,7 +111,7 @@ const RestaurantDetails = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-32">
       {/* Header Image */}
       <div className="relative h-56">
         <img
@@ -304,6 +305,9 @@ const RestaurantDetails = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Floating Cart Button */}
+      <FloatingCartButton />
     </div>
   );
 };
