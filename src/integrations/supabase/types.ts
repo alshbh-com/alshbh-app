@@ -631,6 +631,51 @@ export type Database = {
         }
         Relationships: []
       }
+      districts: {
+        Row: {
+          created_at: string | null
+          default_delivery_fee: number | null
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          latitude: number | null
+          longitude: number | null
+          name: string
+          name_en: string | null
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          default_delivery_fee?: number | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          name: string
+          name_en?: string | null
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          default_delivery_fee?: number | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          name?: string
+          name_en?: string | null
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       group_orders: {
         Row: {
           created_at: string
@@ -867,12 +912,18 @@ export type Database = {
           customer_name: string
           customer_phone: string
           delivery_fee: number
+          district_id: string | null
+          district_name: string | null
           id: string
           items: Json
+          order_number: number
+          platform_fee: number | null
           shared_code: string | null
           status: string | null
           sub_category_id: string | null
           total_amount: number
+          village_id: string | null
+          village_name: string | null
           whatsapp_sent: boolean | null
         }
         Insert: {
@@ -882,12 +933,18 @@ export type Database = {
           customer_name: string
           customer_phone: string
           delivery_fee: number
+          district_id?: string | null
+          district_name?: string | null
           id?: string
           items: Json
+          order_number?: number
+          platform_fee?: number | null
           shared_code?: string | null
           status?: string | null
           sub_category_id?: string | null
           total_amount: number
+          village_id?: string | null
+          village_name?: string | null
           whatsapp_sent?: boolean | null
         }
         Update: {
@@ -897,15 +954,28 @@ export type Database = {
           customer_name?: string
           customer_phone?: string
           delivery_fee?: number
+          district_id?: string | null
+          district_name?: string | null
           id?: string
           items?: Json
+          order_number?: number
+          platform_fee?: number | null
           shared_code?: string | null
           status?: string | null
           sub_category_id?: string | null
           total_amount?: number
+          village_id?: string | null
+          village_name?: string | null
           whatsapp_sent?: boolean | null
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_district_id_fkey"
+            columns: ["district_id"]
+            isOneToOne: false
+            referencedRelation: "districts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "orders_sub_category_id_fkey"
             columns: ["sub_category_id"]
@@ -918,6 +988,13 @@ export type Database = {
             columns: ["sub_category_id"]
             isOneToOne: false
             referencedRelation: "sub_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_village_id_fkey"
+            columns: ["village_id"]
+            isOneToOne: false
+            referencedRelation: "villages"
             referencedColumns: ["id"]
           },
         ]
@@ -1100,6 +1177,7 @@ export type Database = {
           delivery_time_max: number | null
           delivery_time_min: number | null
           description: string | null
+          district_id: string | null
           id: string
           image_url: string | null
           is_active: boolean | null
@@ -1124,6 +1202,7 @@ export type Database = {
           delivery_time_max?: number | null
           delivery_time_min?: number | null
           description?: string | null
+          district_id?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean | null
@@ -1148,6 +1227,7 @@ export type Database = {
           delivery_time_max?: number | null
           delivery_time_min?: number | null
           description?: string | null
+          district_id?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean | null
@@ -1164,6 +1244,13 @@ export type Database = {
           whatsapp_number?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "sub_categories_district_id_fkey"
+            columns: ["district_id"]
+            isOneToOne: false
+            referencedRelation: "districts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "sub_categories_main_category_id_fkey"
             columns: ["main_category_id"]
@@ -1295,6 +1382,56 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      villages: {
+        Row: {
+          created_at: string | null
+          delivery_fee: number
+          district_id: string | null
+          id: string
+          is_active: boolean | null
+          latitude: number | null
+          longitude: number | null
+          name: string
+          name_en: string | null
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          delivery_fee?: number
+          district_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          name: string
+          name_en?: string | null
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          delivery_fee?: number
+          district_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          name?: string
+          name_en?: string | null
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "villages_district_id_fkey"
+            columns: ["district_id"]
+            isOneToOne: false
+            referencedRelation: "districts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       wishlists: {
         Row: {

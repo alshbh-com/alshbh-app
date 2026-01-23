@@ -15,9 +15,10 @@ import {
   Plus,
   Pencil,
   Trash2,
-  X,
   Save,
   Ruler,
+  Map,
+  Home,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -40,7 +41,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-type ActiveTab = 'dashboard' | 'restaurants' | 'products' | 'orders' | 'cities';
+type ActiveTab = 'dashboard' | 'districts' | 'villages' | 'restaurants' | 'products' | 'orders';
 
 interface SizePrice {
   name: string;
@@ -70,12 +71,23 @@ interface RestaurantForm {
   delivery_time_max: number;
   is_active: boolean;
   is_open: boolean;
+  district_id: string;
 }
 
-interface CityForm {
+interface DistrictForm {
   id?: string;
   name: string;
-  delivery_price: number;
+  description: string;
+  image_url: string;
+  default_delivery_fee: number;
+  is_active: boolean;
+}
+
+interface VillageForm {
+  id?: string;
+  name: string;
+  district_id: string;
+  delivery_fee: number;
   is_active: boolean;
 }
 
@@ -95,11 +107,27 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   
   // Modals
+  const [showDistrictModal, setShowDistrictModal] = useState(false);
+  const [showVillageModal, setShowVillageModal] = useState(false);
   const [showRestaurantModal, setShowRestaurantModal] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
-  const [showCityModal, setShowCityModal] = useState(false);
   
   // Forms
+  const [districtForm, setDistrictForm] = useState<DistrictForm>({
+    name: '',
+    description: '',
+    image_url: '',
+    default_delivery_fee: 15,
+    is_active: true,
+  });
+
+  const [villageForm, setVillageForm] = useState<VillageForm>({
+    name: '',
+    district_id: '',
+    delivery_fee: 10,
+    is_active: true,
+  });
+
   const [restaurantForm, setRestaurantForm] = useState<RestaurantForm>({
     name: '',
     description: '',
@@ -110,6 +138,7 @@ const AdminDashboard = () => {
     delivery_time_max: 45,
     is_active: true,
     is_open: true,
+    district_id: '',
   });
   
   const [productForm, setProductForm] = useState<ProductForm>({
@@ -121,18 +150,12 @@ const AdminDashboard = () => {
     is_active: true,
     sizes_and_prices: [],
   });
-  
-  const [cityForm, setCityForm] = useState<CityForm>({
-    name: '',
-    delivery_price: 10,
-    is_active: true,
-  });
 
   // Check authentication
   useEffect(() => {
     const isAuth = localStorage.getItem('admin_authenticated');
     const authTime = localStorage.getItem('admin_auth_time');
-    const SESSION_DURATION = 2 * 60 * 60 * 1000; // 2 hours
+    const SESSION_DURATION = 2 * 60 * 60 * 1000;
 
     if (!isAuth || !authTime || Date.now() - parseInt(authTime) > SESSION_DURATION) {
       localStorage.removeItem('admin_authenticated');
@@ -152,10 +175,11 @@ const AdminDashboard = () => {
   const { data: stats, isLoading: loadingStats } = useQuery({
     queryKey: ['admin-stats'],
     queryFn: async () => {
-      const [ordersRes, restaurantsRes, productsRes] = await Promise.all([
+      const [ordersRes, restaurantsRes, productsRes, districtsRes] = await Promise.all([
         supabase.from('orders').select('*', { count: 'exact' }),
         supabase.from('sub_categories').select('*', { count: 'exact' }).eq('is_active', true),
         supabase.from('products').select('*', { count: 'exact' }).eq('is_active', true),
+        supabase.from('districts').select('*', { count: 'exact' }).eq('is_active', true),
       ]);
 
       const orders = ordersRes.data || [];
@@ -173,13 +197,40 @@ const AdminDashboard = () => {
         todayOrders: todayOrders.length,
         totalRestaurants: restaurantsRes.count || 0,
         totalProducts: productsRes.count || 0,
+        totalDistricts: districtsRes.count || 0,
         totalRevenue,
         todayRevenue,
       };
     },
   });
 
-  // Fetch orders with order numbers
+  // Fetch districts
+  const { data: districts, isLoading: loadingDistricts } = useQuery({
+    queryKey: ['admin-districts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('districts')
+        .select('*')
+        .order('sort_order', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch villages
+  const { data: villages, isLoading: loadingVillages } = useQuery({
+    queryKey: ['admin-villages'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('villages')
+        .select('*, districts(name)')
+        .order('name', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch orders
   const { data: allOrders, isLoading: loadingOrders } = useQuery({
     queryKey: ['admin-all-orders'],
     queryFn: async () => {
@@ -203,7 +254,7 @@ const AdminDashboard = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('sub_categories')
-        .select('*')
+        .select('*, districts(name)')
         .order('sort_order', { ascending: true });
       if (error) throw error;
       return data;
@@ -223,17 +274,96 @@ const AdminDashboard = () => {
     },
   });
 
-  // Fetch cities
-  const { data: cities, isLoading: loadingCities } = useQuery({
-    queryKey: ['admin-cities'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('allowed_cities')
-        .select('*')
-        .order('name', { ascending: true });
-      if (error) throw error;
-      return data;
+  // District mutations
+  const saveDistrictMutation = useMutation({
+    mutationFn: async (data: DistrictForm) => {
+      if (data.id) {
+        const { error } = await supabase
+          .from('districts')
+          .update({
+            name: data.name,
+            description: data.description,
+            image_url: data.image_url,
+            default_delivery_fee: data.default_delivery_fee,
+            is_active: data.is_active,
+          })
+          .eq('id', data.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('districts').insert({
+          name: data.name,
+          description: data.description,
+          image_url: data.image_url,
+          default_delivery_fee: data.default_delivery_fee,
+          is_active: data.is_active,
+        });
+        if (error) throw error;
+      }
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-districts'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+      setShowDistrictModal(false);
+      toast.success(districtForm.id ? 'تم تحديث المركز' : 'تم إضافة المركز');
+    },
+    onError: () => toast.error('حدث خطأ'),
+  });
+
+  const deleteDistrictMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('districts').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-districts'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+      toast.success('تم حذف المركز');
+    },
+    onError: () => toast.error('حدث خطأ'),
+  });
+
+  // Village mutations
+  const saveVillageMutation = useMutation({
+    mutationFn: async (data: VillageForm) => {
+      if (data.id) {
+        const { error } = await supabase
+          .from('villages')
+          .update({
+            name: data.name,
+            district_id: data.district_id,
+            delivery_fee: data.delivery_fee,
+            is_active: data.is_active,
+          })
+          .eq('id', data.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('villages').insert({
+          name: data.name,
+          district_id: data.district_id,
+          delivery_fee: data.delivery_fee,
+          is_active: data.is_active,
+        });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-villages'] });
+      setShowVillageModal(false);
+      toast.success(villageForm.id ? 'تم تحديث القرية' : 'تم إضافة القرية');
+    },
+    onError: () => toast.error('حدث خطأ'),
+  });
+
+  const deleteVillageMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('villages').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-villages'] });
+      toast.success('تم حذف القرية');
+    },
+    onError: () => toast.error('حدث خطأ'),
   });
 
   // Restaurant mutations
@@ -252,6 +382,7 @@ const AdminDashboard = () => {
             delivery_time_max: data.delivery_time_max,
             is_active: data.is_active,
             is_open: data.is_open,
+            district_id: data.district_id || null,
           })
           .eq('id', data.id);
         if (error) throw error;
@@ -266,6 +397,7 @@ const AdminDashboard = () => {
           delivery_time_max: data.delivery_time_max,
           is_active: data.is_active,
           is_open: data.is_open,
+          district_id: data.district_id || null,
         });
         if (error) throw error;
       }
@@ -276,9 +408,7 @@ const AdminDashboard = () => {
       setShowRestaurantModal(false);
       toast.success(restaurantForm.id ? 'تم تحديث المطعم' : 'تم إضافة المطعم');
     },
-    onError: () => {
-      toast.error('حدث خطأ');
-    },
+    onError: () => toast.error('حدث خطأ'),
   });
 
   const deleteRestaurantMutation = useMutation({
@@ -291,9 +421,7 @@ const AdminDashboard = () => {
       queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
       toast.success('تم حذف المطعم');
     },
-    onError: () => {
-      toast.error('حدث خطأ');
-    },
+    onError: () => toast.error('حدث خطأ'),
   });
 
   // Product mutations
@@ -333,9 +461,7 @@ const AdminDashboard = () => {
       setShowProductModal(false);
       toast.success(productForm.id ? 'تم تحديث المنتج' : 'تم إضافة المنتج');
     },
-    onError: () => {
-      toast.error('حدث خطأ');
-    },
+    onError: () => toast.error('حدث خطأ'),
   });
 
   const deleteProductMutation = useMutation({
@@ -348,55 +474,7 @@ const AdminDashboard = () => {
       queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
       toast.success('تم حذف المنتج');
     },
-    onError: () => {
-      toast.error('حدث خطأ');
-    },
-  });
-
-  // City mutations
-  const saveCityMutation = useMutation({
-    mutationFn: async (data: CityForm) => {
-      if (data.id) {
-        const { error } = await supabase
-          .from('allowed_cities')
-          .update({
-            name: data.name,
-            delivery_price: data.delivery_price,
-            is_active: data.is_active,
-          })
-          .eq('id', data.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('allowed_cities').insert({
-          name: data.name,
-          delivery_price: data.delivery_price,
-          is_active: data.is_active,
-        });
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-cities'] });
-      setShowCityModal(false);
-      toast.success(cityForm.id ? 'تم تحديث المدينة' : 'تم إضافة المدينة');
-    },
-    onError: () => {
-      toast.error('حدث خطأ');
-    },
-  });
-
-  const deleteCityMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('allowed_cities').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-cities'] });
-      toast.success('تم حذف المدينة');
-    },
-    onError: () => {
-      toast.error('حدث خطأ');
-    },
+    onError: () => toast.error('حدث خطأ'),
   });
 
   // Order status mutation
@@ -412,6 +490,48 @@ const AdminDashboard = () => {
   });
 
   // Handlers
+  const openDistrictModal = (district?: typeof districts[number]) => {
+    if (district) {
+      setDistrictForm({
+        id: district.id,
+        name: district.name,
+        description: district.description || '',
+        image_url: district.image_url || '',
+        default_delivery_fee: district.default_delivery_fee || 15,
+        is_active: district.is_active ?? true,
+      });
+    } else {
+      setDistrictForm({
+        name: '',
+        description: '',
+        image_url: '',
+        default_delivery_fee: 15,
+        is_active: true,
+      });
+    }
+    setShowDistrictModal(true);
+  };
+
+  const openVillageModal = (village?: typeof villages[number]) => {
+    if (village) {
+      setVillageForm({
+        id: village.id,
+        name: village.name,
+        district_id: village.district_id || '',
+        delivery_fee: village.delivery_fee || 10,
+        is_active: village.is_active ?? true,
+      });
+    } else {
+      setVillageForm({
+        name: '',
+        district_id: districts?.[0]?.id || '',
+        delivery_fee: 10,
+        is_active: true,
+      });
+    }
+    setShowVillageModal(true);
+  };
+
   const openRestaurantModal = (restaurant?: typeof restaurants[number]) => {
     if (restaurant) {
       setRestaurantForm({
@@ -425,6 +545,7 @@ const AdminDashboard = () => {
         delivery_time_max: restaurant.delivery_time_max || 45,
         is_active: restaurant.is_active ?? true,
         is_open: restaurant.is_open ?? true,
+        district_id: restaurant.district_id || '',
       });
     } else {
       setRestaurantForm({
@@ -437,6 +558,7 @@ const AdminDashboard = () => {
         delivery_time_max: 45,
         is_active: true,
         is_open: true,
+        district_id: districts?.[0]?.id || '',
       });
     }
     setShowRestaurantModal(true);
@@ -476,24 +598,6 @@ const AdminDashboard = () => {
     setShowProductModal(true);
   };
 
-  const openCityModal = (city?: typeof cities[number]) => {
-    if (city) {
-      setCityForm({
-        id: city.id,
-        name: city.name,
-        delivery_price: city.delivery_price || 10,
-        is_active: city.is_active ?? true,
-      });
-    } else {
-      setCityForm({
-        name: '',
-        delivery_price: 10,
-        is_active: true,
-      });
-    }
-    setShowCityModal(true);
-  };
-
   const updateSizePrice = (index: number, price: number) => {
     const newSizes = [...productForm.sizes_and_prices];
     newSizes[index].price = price;
@@ -502,17 +606,20 @@ const AdminDashboard = () => {
 
   const statCards = [
     { title: 'الطلبات اليوم', value: stats?.todayOrders || 0, icon: ClipboardList, color: 'bg-primary' },
-    { title: 'إيرادات اليوم', value: `${stats?.todayRevenue || 0} ج.م`, icon: DollarSign, color: 'bg-green-500' },
-    { title: 'إجمالي الطلبات', value: stats?.totalOrders || 0, icon: TrendingUp, color: 'bg-blue-500' },
-    { title: 'المطاعم النشطة', value: stats?.totalRestaurants || 0, icon: Store, color: 'bg-orange-500' },
+    { title: 'إيرادات اليوم', value: `${stats?.todayRevenue || 0} ج.م`, icon: DollarSign, color: 'bg-success' },
+    { title: 'إجمالي الطلبات', value: stats?.totalOrders || 0, icon: TrendingUp, color: 'bg-accent' },
+    { title: 'المراكز', value: stats?.totalDistricts || 0, icon: Map, color: 'bg-warning' },
+    { title: 'المطاعم', value: stats?.totalRestaurants || 0, icon: Store, color: 'bg-primary' },
+    { title: 'المنتجات', value: stats?.totalProducts || 0, icon: Package, color: 'bg-accent' },
   ];
 
   const tabs = [
     { id: 'dashboard', label: 'لوحة التحكم', icon: LayoutDashboard },
+    { id: 'districts', label: 'المراكز', icon: Map },
+    { id: 'villages', label: 'القرى', icon: Home },
     { id: 'restaurants', label: 'المطاعم', icon: Store },
     { id: 'products', label: 'المنتجات', icon: Package },
     { id: 'orders', label: 'الطلبات', icon: ClipboardList },
-    { id: 'cities', label: 'المدن والتوصيل', icon: MapPin },
   ];
 
   return (
@@ -526,7 +633,7 @@ const AdminDashboard = () => {
             </div>
             <div>
               <h1 className="font-bold">لوحة التحكم</h1>
-              <p className="text-xs text-muted-foreground">الشبح</p>
+              <p className="text-xs text-muted-foreground">الشبح - طلب طعام</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -542,7 +649,7 @@ const AdminDashboard = () => {
 
       <div className="container p-4">
         {/* Tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-4 mb-4">
+        <div className="flex gap-2 overflow-x-auto pb-4 mb-4 scrollbar-hide">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -562,9 +669,9 @@ const AdminDashboard = () => {
         {/* Dashboard Tab */}
         {activeTab === 'dashboard' && (
           <>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
               {loadingStats
-                ? [...Array(4)].map((_, i) => (
+                ? [...Array(6)].map((_, i) => (
                     <Skeleton key={i} className="h-24 rounded-2xl" />
                   ))
                 : statCards.map((stat, index) => {
@@ -578,7 +685,7 @@ const AdminDashboard = () => {
                         className="bg-card rounded-2xl p-4 shadow-soft"
                       >
                         <div className={`w-10 h-10 rounded-xl ${stat.color} flex items-center justify-center mb-3`}>
-                          <Icon className="w-5 h-5 text-white" />
+                          <Icon className="w-5 h-5 text-primary-foreground" />
                         </div>
                         <p className="text-2xl font-bold">{stat.value}</p>
                         <p className="text-sm text-muted-foreground">{stat.title}</p>
@@ -606,14 +713,16 @@ const AdminDashboard = () => {
                         <p className="font-medium">
                           <span className="text-primary">#{order.orderNumber}</span> - {order.customer_name}
                         </p>
-                        <p className="text-sm text-muted-foreground">{order.customer_phone}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {order.village_name || order.customer_city}
+                        </p>
                       </div>
                       <div className="text-left">
                         <p className="font-bold text-primary">{order.total_amount} ج.م</p>
                         <span className={`text-xs px-2 py-1 rounded-full ${
-                          order.status === 'pending' ? 'bg-yellow-500/20 text-yellow-600' :
-                          order.status === 'confirmed' ? 'bg-blue-500/20 text-blue-600' :
-                          'bg-green-500/20 text-green-600'
+                          order.status === 'pending' ? 'bg-warning/20 text-warning' :
+                          order.status === 'confirmed' ? 'bg-accent/20 text-accent' :
+                          'bg-success/20 text-success'
                         }`}>
                           {order.status === 'pending' && 'قيد الانتظار'}
                           {order.status === 'confirmed' && 'تم التأكيد'}
@@ -628,6 +737,126 @@ const AdminDashboard = () => {
               )}
             </div>
           </>
+        )}
+
+        {/* Districts Tab */}
+        {activeTab === 'districts' && (
+          <div className="bg-card rounded-2xl p-4 shadow-soft">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-bold">المراكز</h2>
+              <Button onClick={() => openDistrictModal()}>
+                <Plus className="w-4 h-4 ml-2" />
+                إضافة مركز
+              </Button>
+            </div>
+            {loadingDistricts ? (
+              <div className="space-y-3">
+                {[...Array(5)].map((_, i) => (
+                  <Skeleton key={i} className="h-20 rounded-xl" />
+                ))}
+              </div>
+            ) : districts && districts.length > 0 ? (
+              <div className="space-y-3">
+                {districts.map((district) => (
+                  <div
+                    key={district.id}
+                    className="flex items-center gap-4 p-3 bg-muted rounded-xl"
+                  >
+                    <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Map className="w-6 h-6 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-bold">{district.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        توصيل افتراضي: {district.default_delivery_fee} ج.م
+                      </p>
+                    </div>
+                    <div className={`w-3 h-3 rounded-full ${district.is_active ? 'bg-success' : 'bg-destructive'}`} />
+                    <div className="flex gap-2">
+                      <Button variant="ghost" size="icon" onClick={() => openDistrictModal(district)}>
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="text-destructive"
+                        onClick={() => {
+                          if (confirm('هل تريد حذف هذا المركز؟')) {
+                            deleteDistrictMutation.mutate(district.id);
+                          }
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-center text-muted-foreground py-8">لا توجد مراكز</p>
+            )}
+          </div>
+        )}
+
+        {/* Villages Tab */}
+        {activeTab === 'villages' && (
+          <div className="bg-card rounded-2xl p-4 shadow-soft">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-bold">القرى</h2>
+              <Button onClick={() => openVillageModal()}>
+                <Plus className="w-4 h-4 ml-2" />
+                إضافة قرية
+              </Button>
+            </div>
+            {loadingVillages ? (
+              <div className="space-y-3">
+                {[...Array(5)].map((_, i) => (
+                  <Skeleton key={i} className="h-16 rounded-xl" />
+                ))}
+              </div>
+            ) : villages && villages.length > 0 ? (
+              <div className="space-y-3">
+                {villages.map((village) => (
+                  <div
+                    key={village.id}
+                    className="flex items-center justify-between p-3 bg-muted rounded-xl"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-3 h-3 rounded-full ${village.is_active ? 'bg-success' : 'bg-destructive'}`} />
+                      <div>
+                        <span className="font-bold">{village.name}</span>
+                        <p className="text-xs text-muted-foreground">
+                          {(village as typeof village & { districts?: { name: string } }).districts?.name || 'غير محدد'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-primary font-bold">{village.delivery_fee} ج.م</span>
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => openVillageModal(village)}>
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-destructive"
+                          onClick={() => {
+                            if (confirm('هل تريد حذف هذه القرية؟')) {
+                              deleteVillageMutation.mutate(village.id);
+                            }
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-center text-muted-foreground py-8">لا توجد قرى</p>
+            )}
+          </div>
         )}
 
         {/* Restaurants Tab */}
@@ -660,11 +889,12 @@ const AdminDashboard = () => {
                     />
                     <div className="flex-1">
                       <p className="font-bold">{restaurant.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {(restaurant as typeof restaurant & { districts?: { name: string } }).districts?.name || 'غير محدد'}
+                      </p>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <span className={`w-2 h-2 rounded-full ${restaurant.is_open ? 'bg-green-500' : 'bg-red-500'}`} />
+                        <span className={`w-2 h-2 rounded-full ${restaurant.is_open ? 'bg-success' : 'bg-destructive'}`} />
                         {restaurant.is_open ? 'مفتوح' : 'مغلق'}
-                        <span className="mx-1">•</span>
-                        توصيل: {restaurant.delivery_fee} ج.م
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -740,9 +970,6 @@ const AdminDashboard = () => {
                           ) : (
                             <span className="text-sm text-primary font-bold">{product.price} ج.م</span>
                           )}
-                          {sizes.length > 3 && (
-                            <span className="text-xs text-muted-foreground">+{sizes.length - 3}</span>
-                          )}
                         </div>
                       </div>
                       <div className="flex gap-2">
@@ -811,7 +1038,8 @@ const AdminDashboard = () => {
                       <p className="text-sm text-muted-foreground mb-1">{order.customer_phone}</p>
                       <p className="text-sm text-muted-foreground mb-2">
                         <MapPin className="w-3 h-3 inline ml-1" />
-                        {order.customer_city}
+                        {order.village_name || order.customer_city}
+                        {order.district_name && ` - ${order.district_name}`}
                       </p>
                       <div className="text-sm mb-2">
                         {items?.map((item, i) => (
@@ -822,7 +1050,12 @@ const AdminDashboard = () => {
                         ))}
                       </div>
                       <div className="flex items-center justify-between">
-                        <p className="font-bold text-primary">{order.total_amount} ج.م</p>
+                        <div>
+                          <p className="font-bold text-primary">{order.total_amount} ج.م</p>
+                          <p className="text-xs text-muted-foreground">
+                            توصيل: {order.delivery_fee} ج.م
+                          </p>
+                        </div>
                         <p className="text-xs text-muted-foreground">
                           {new Date(order.created_at || '').toLocaleString('ar-EG')}
                         </p>
@@ -836,63 +1069,104 @@ const AdminDashboard = () => {
             )}
           </div>
         )}
-
-        {/* Cities Tab */}
-        {activeTab === 'cities' && (
-          <div className="bg-card rounded-2xl p-4 shadow-soft">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold">المدن وأسعار التوصيل</h2>
-              <Button onClick={() => openCityModal()}>
-                <Plus className="w-4 h-4 ml-2" />
-                إضافة مدينة
-              </Button>
-            </div>
-            {loadingCities ? (
-              <div className="space-y-3">
-                {[...Array(5)].map((_, i) => (
-                  <Skeleton key={i} className="h-16 rounded-xl" />
-                ))}
-              </div>
-            ) : cities && cities.length > 0 ? (
-              <div className="space-y-3">
-                {cities.map((city) => (
-                  <div
-                    key={city.id}
-                    className="flex items-center justify-between p-3 bg-muted rounded-xl"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-3 h-3 rounded-full ${city.is_active ? 'bg-green-500' : 'bg-red-500'}`} />
-                      <span className="font-bold">{city.name}</span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-primary font-bold">{city.delivery_price} ج.م</span>
-                      <div className="flex gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => openCityModal(city)}>
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="text-destructive"
-                          onClick={() => {
-                            if (confirm('هل تريد حذف هذه المدينة؟')) {
-                              deleteCityMutation.mutate(city.id);
-                            }
-                          }}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-center text-muted-foreground py-8">لا توجد مدن</p>
-            )}
-          </div>
-        )}
       </div>
+
+      {/* District Modal */}
+      <Dialog open={showDistrictModal} onOpenChange={setShowDistrictModal}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{districtForm.id ? 'تعديل المركز' : 'إضافة مركز جديد'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              placeholder="اسم المركز *"
+              value={districtForm.name}
+              onChange={(e) => setDistrictForm({ ...districtForm, name: e.target.value })}
+            />
+            <Textarea
+              placeholder="وصف المركز"
+              value={districtForm.description}
+              onChange={(e) => setDistrictForm({ ...districtForm, description: e.target.value })}
+            />
+            <Input
+              placeholder="رابط الصورة"
+              value={districtForm.image_url}
+              onChange={(e) => setDistrictForm({ ...districtForm, image_url: e.target.value })}
+            />
+            <Input
+              type="number"
+              placeholder="رسوم التوصيل الافتراضية"
+              value={districtForm.default_delivery_fee}
+              onChange={(e) => setDistrictForm({ ...districtForm, default_delivery_fee: Number(e.target.value) })}
+            />
+            <div className="flex items-center justify-between">
+              <span>المركز نشط</span>
+              <Switch
+                checked={districtForm.is_active}
+                onCheckedChange={(checked) => setDistrictForm({ ...districtForm, is_active: checked })}
+              />
+            </div>
+            <Button 
+              className="w-full" 
+              onClick={() => saveDistrictMutation.mutate(districtForm)}
+              disabled={!districtForm.name || saveDistrictMutation.isPending}
+            >
+              <Save className="w-4 h-4 ml-2" />
+              {saveDistrictMutation.isPending ? 'جاري الحفظ...' : 'حفظ'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Village Modal */}
+      <Dialog open={showVillageModal} onOpenChange={setShowVillageModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{villageForm.id ? 'تعديل القرية' : 'إضافة قرية جديدة'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              placeholder="اسم القرية *"
+              value={villageForm.name}
+              onChange={(e) => setVillageForm({ ...villageForm, name: e.target.value })}
+            />
+            <Select
+              value={villageForm.district_id}
+              onValueChange={(value) => setVillageForm({ ...villageForm, district_id: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="اختر المركز *" />
+              </SelectTrigger>
+              <SelectContent>
+                {districts?.map((d) => (
+                  <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              type="number"
+              placeholder="رسوم التوصيل"
+              value={villageForm.delivery_fee}
+              onChange={(e) => setVillageForm({ ...villageForm, delivery_fee: Number(e.target.value) })}
+            />
+            <div className="flex items-center justify-between">
+              <span>القرية نشطة</span>
+              <Switch
+                checked={villageForm.is_active}
+                onCheckedChange={(checked) => setVillageForm({ ...villageForm, is_active: checked })}
+              />
+            </div>
+            <Button 
+              className="w-full" 
+              onClick={() => saveVillageMutation.mutate(villageForm)}
+              disabled={!villageForm.name || !villageForm.district_id || saveVillageMutation.isPending}
+            >
+              <Save className="w-4 h-4 ml-2" />
+              {saveVillageMutation.isPending ? 'جاري الحفظ...' : 'حفظ'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Restaurant Modal */}
       <Dialog open={showRestaurantModal} onOpenChange={setShowRestaurantModal}>
@@ -916,6 +1190,19 @@ const AdminDashboard = () => {
               value={restaurantForm.image_url}
               onChange={(e) => setRestaurantForm({ ...restaurantForm, image_url: e.target.value })}
             />
+            <Select
+              value={restaurantForm.district_id}
+              onValueChange={(value) => setRestaurantForm({ ...restaurantForm, district_id: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="اختر المركز" />
+              </SelectTrigger>
+              <SelectContent>
+                {districts?.map((d) => (
+                  <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Input
               placeholder="رقم الواتساب"
               value={restaurantForm.whatsapp_number}
@@ -931,7 +1218,7 @@ const AdminDashboard = () => {
               <div className="flex gap-2">
                 <Input
                   type="number"
-                  placeholder="وقت التوصيل من"
+                  placeholder="من"
                   value={restaurantForm.delivery_time_min}
                   onChange={(e) => setRestaurantForm({ ...restaurantForm, delivery_time_min: Number(e.target.value) })}
                 />
@@ -1048,43 +1335,6 @@ const AdminDashboard = () => {
             >
               <Save className="w-4 h-4 ml-2" />
               {saveProductMutation.isPending ? 'جاري الحفظ...' : 'حفظ'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* City Modal */}
-      <Dialog open={showCityModal} onOpenChange={setShowCityModal}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>{cityForm.id ? 'تعديل المدينة' : 'إضافة مدينة جديدة'}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Input
-              placeholder="اسم المدينة *"
-              value={cityForm.name}
-              onChange={(e) => setCityForm({ ...cityForm, name: e.target.value })}
-            />
-            <Input
-              type="number"
-              placeholder="سعر التوصيل"
-              value={cityForm.delivery_price}
-              onChange={(e) => setCityForm({ ...cityForm, delivery_price: Number(e.target.value) })}
-            />
-            <div className="flex items-center justify-between">
-              <span>المدينة نشطة</span>
-              <Switch
-                checked={cityForm.is_active}
-                onCheckedChange={(checked) => setCityForm({ ...cityForm, is_active: checked })}
-              />
-            </div>
-            <Button 
-              className="w-full" 
-              onClick={() => saveCityMutation.mutate(cityForm)}
-              disabled={!cityForm.name || saveCityMutation.isPending}
-            >
-              <Save className="w-4 h-4 ml-2" />
-              {saveCityMutation.isPending ? 'جاري الحفظ...' : 'حفظ'}
             </Button>
           </div>
         </DialogContent>
