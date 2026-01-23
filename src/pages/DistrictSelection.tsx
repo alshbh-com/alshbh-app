@@ -67,26 +67,25 @@ const DistrictSelection = () => {
   const navigate = useNavigate();
   const [selectedDistrict, setSelectedDistrict] = useState<District | null>(null);
   const [selectedVillage, setSelectedVillage] = useState<Village | null>(null);
-  const [forceShow, setForceShow] = useState(false);
 
-  // Check if coming from change location action
+  // IMPORTANT: avoid redirect race-condition by reading query param synchronously
+  const isChangeMode = new URLSearchParams(window.location.search).get('change') === 'true';
+
+  // If change=true, clear saved location once
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('change') === 'true') {
+    if (isChangeMode) {
       localStorage.removeItem('alshbh_selected_location');
-      setForceShow(true);
     }
-  }, []);
+  }, [isChangeMode]);
 
-  // Check if location is already saved (only redirect if not forcing show)
+  // Redirect to /home only when NOT in change mode and location exists
   useEffect(() => {
-    if (!forceShow) {
-      const savedLocation = localStorage.getItem('alshbh_selected_location');
-      if (savedLocation) {
-        navigate('/home');
-      }
+    if (isChangeMode) return;
+    const savedLocation = localStorage.getItem('alshbh_selected_location');
+    if (savedLocation) {
+      navigate('/home');
     }
-  }, [navigate, forceShow]);
+  }, [navigate, isChangeMode]);
 
   const { data: districts, isLoading: loadingDistricts } = useQuery({
     queryKey: ['districts'],
