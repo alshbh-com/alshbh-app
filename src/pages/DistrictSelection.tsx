@@ -1,18 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, ChevronLeft, Sparkles, Navigation, Store, X } from 'lucide-react';
+import { MapPin, ChevronLeft, Sparkles, Navigation, Store, Truck, Info } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+
+// Lazy load 3D components for better performance
+const DistrictMap3D = lazy(() => import('@/components/3d/DistrictMap3D'));
+const VillageOrbit3D = lazy(() => import('@/components/3d/VillageOrbit3D'));
 
 interface District {
   id: string;
@@ -52,6 +49,20 @@ const fetchVillages = async (districtId: string): Promise<Village[]> => {
   return data || [];
 };
 
+// 3D Loading fallback
+const Map3DFallback = () => (
+  <div className="w-full h-[400px] md:h-[500px] rounded-2xl bg-gradient-to-b from-slate-900 to-slate-800 flex items-center justify-center">
+    <div className="text-center space-y-4">
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+        className="w-16 h-16 mx-auto rounded-full border-4 border-primary border-t-transparent"
+      />
+      <p className="text-white/70">جاري تحميل الخريطة...</p>
+    </div>
+  </div>
+);
+
 const DistrictSelection = () => {
   const navigate = useNavigate();
   const [selectedDistrict, setSelectedDistrict] = useState<District | null>(null);
@@ -81,25 +92,18 @@ const DistrictSelection = () => {
     setSelectedVillage(null);
   };
 
-  const handleVillageSelect = (villageId: string) => {
-    const village = villages?.find((v) => v.id === villageId);
-    if (village) {
-      setSelectedVillage(village);
-    }
+  const handleVillageSelect = (village: Village) => {
+    setSelectedVillage(village);
   };
 
   const handleConfirm = () => {
     if (selectedDistrict && selectedVillage) {
       const locationData = {
-        district: {
-          id: selectedDistrict.id,
-          name: selectedDistrict.name,
-        },
-        village: {
-          id: selectedVillage.id,
-          name: selectedVillage.name,
-          deliveryFee: selectedVillage.delivery_fee,
-        },
+        districtId: selectedDistrict.id,
+        districtName: selectedDistrict.name,
+        villageId: selectedVillage.id,
+        villageName: selectedVillage.name,
+        deliveryFee: selectedVillage.delivery_fee,
       };
       localStorage.setItem('alshbh_selected_location', JSON.stringify(locationData));
       navigate('/home');
@@ -123,10 +127,10 @@ const DistrictSelection = () => {
               </Button>
             )}
             <div className="flex items-center gap-2 mx-auto">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center neon-glow">
                 <span className="text-xl">👻</span>
               </div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              <h1 className="text-xl font-bold neon-text text-primary">
                 الشبح
               </h1>
             </div>
@@ -135,83 +139,44 @@ const DistrictSelection = () => {
         </div>
       </header>
 
-      <main className="container py-8 px-4">
+      <main className="container py-6 px-4">
         <AnimatePresence mode="wait">
           {!selectedDistrict ? (
-            // Step 1: Select District
+            // Step 1: Select District with 3D Map
             <motion.div
               key="districts"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="space-y-8"
+              className="space-y-6"
             >
               {/* Hero Section */}
-              <div className="text-center space-y-4">
+              <div className="text-center space-y-3">
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: 'spring', duration: 0.6 }}
-                  className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center"
+                  className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center neon-glow"
                 >
-                  <MapPin className="w-12 h-12 text-primary" />
+                  <MapPin className="w-10 h-10 text-primary" />
                 </motion.div>
-                <h2 className="text-2xl font-bold">اختر مركزك</h2>
-                <p className="text-muted-foreground">
-                  حدد موقعك لعرض المطاعم المتاحة في منطقتك
+                <h2 className="text-2xl font-bold">🏰 اختر مركزك</h2>
+                <p className="text-muted-foreground text-sm">
+                  اضغط على المركز في الخريطة لاختياره
                 </p>
               </div>
 
-              {/* Districts Grid */}
+              {/* 3D Map */}
               {loadingDistricts ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {[...Array(6)].map((_, i) => (
-                    <Skeleton key={i} className="h-40 rounded-2xl" />
-                  ))}
-                </div>
+                <Map3DFallback />
               ) : districts && districts.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {districts.map((district, index) => (
-                    <motion.button
-                      key={district.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      onClick={() => handleDistrictSelect(district)}
-                      className="group relative overflow-hidden rounded-2xl bg-card border border-border/50 p-6 text-right hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10 transition-all duration-300"
-                    >
-                      {/* Background Gradient */}
-                      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      
-                      {/* Sparkle Effect */}
-                      <motion.div
-                        className="absolute top-4 left-4"
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
-                      >
-                        <Sparkles className="w-5 h-5 text-primary/30 group-hover:text-primary transition-colors" />
-                      </motion.div>
-
-                      <div className="relative space-y-3">
-                        <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                          <Navigation className="w-7 h-7 text-primary-foreground" />
-                        </div>
-                        <h3 className="text-lg font-bold">{district.name}</h3>
-                        {district.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {district.description}
-                          </p>
-                        )}
-                        {district.default_delivery_fee && (
-                          <div className="flex items-center gap-2 text-sm text-primary font-medium">
-                            <Store className="w-4 h-4" />
-                            <span>التوصيل من {district.default_delivery_fee} ج.م</span>
-                          </div>
-                        )}
-                      </div>
-                    </motion.button>
-                  ))}
-                </div>
+                <Suspense fallback={<Map3DFallback />}>
+                  <DistrictMap3D
+                    districts={districts}
+                    onDistrictSelect={handleDistrictSelect}
+                    selectedDistrictId={undefined}
+                  />
+                </Suspense>
               ) : (
                 <motion.div
                   initial={{ opacity: 0 }}
@@ -220,120 +185,201 @@ const DistrictSelection = () => {
                 >
                   <div className="text-6xl mb-4">🏘️</div>
                   <h3 className="text-xl font-bold mb-2">لا توجد مناطق حالياً</h3>
-                  <p className="text-muted-foreground">
-                    سيتم إضافة المناطق قريباً
-                  </p>
+                  <p className="text-muted-foreground">سيتم إضافة المناطق قريباً</p>
                 </motion.div>
               )}
+
+              {/* Districts Grid for accessibility/fallback */}
+              {districts && districts.length > 0 && (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground text-center">
+                    أو اختر من القائمة:
+                  </p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {districts.map((district, index) => (
+                      <motion.button
+                        key={district.id}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: index * 0.05 }}
+                        onClick={() => handleDistrictSelect(district)}
+                        className="group p-4 rounded-xl bg-card border border-border/50 hover:border-primary/50 hover:neon-glow transition-all text-right"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center flex-shrink-0">
+                            <Navigation className="w-5 h-5 text-primary-foreground" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-bold truncate">{district.name}</p>
+                            {district.default_delivery_fee && (
+                              <p className="text-xs text-primary">
+                                من {district.default_delivery_fee} ج.م
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Delivery Info */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="flex items-center gap-3 p-4 rounded-xl bg-primary/10 border border-primary/20"
+              >
+                <Truck className="w-8 h-8 text-primary flex-shrink-0" />
+                <div>
+                  <p className="font-bold text-sm">توصيل سريع لجميع المناطق</p>
+                  <p className="text-xs text-muted-foreground">
+                    سيارات توصيل متاحة على مدار الساعة
+                  </p>
+                </div>
+              </motion.div>
             </motion.div>
           ) : (
-            // Step 2: Select Village
+            // Step 2: Select Village with 3D Orbit
             <motion.div
               key="villages"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="max-w-lg mx-auto space-y-8"
+              className="space-y-6"
             >
-              {/* Selected District Info */}
-              <div className="text-center space-y-4">
+              {/* District Info */}
+              <div className="text-center space-y-2">
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: 'spring', duration: 0.6 }}
-                  className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center"
+                  className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center neon-glow"
                 >
-                  <Navigation className="w-10 h-10 text-primary-foreground" />
+                  <Navigation className="w-8 h-8 text-primary-foreground" />
                 </motion.div>
-                <div>
-                  <h2 className="text-2xl font-bold">{selectedDistrict.name}</h2>
-                  <p className="text-muted-foreground">اختر قريتك أو منطقتك</p>
-                </div>
+                <h2 className="text-xl font-bold">{selectedDistrict.name}</h2>
+                <p className="text-muted-foreground text-sm">
+                  🌙 اختر قريتك من الأقمار الدوارة
+                </p>
               </div>
 
-              {/* Village Selection */}
-              <div className="space-y-4">
-                {loadingVillages ? (
-                  <Skeleton className="h-14 rounded-xl" />
-                ) : villages && villages.length > 0 ? (
-                  <>
-                    <Select onValueChange={handleVillageSelect}>
-                      <SelectTrigger className="h-14 rounded-xl text-base">
-                        <SelectValue placeholder="اختر القرية / المنطقة" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {villages.map((village) => (
-                          <SelectItem key={village.id} value={village.id}>
-                            <div className="flex items-center justify-between w-full gap-4">
-                              <span>{village.name}</span>
-                              <span className="text-primary font-medium">
-                                توصيل: {village.delivery_fee} ج.م
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+              {/* 3D Village Orbit */}
+              {loadingVillages ? (
+                <Map3DFallback />
+              ) : villages && villages.length > 0 ? (
+                <>
+                  <Suspense fallback={<Map3DFallback />}>
+                    <VillageOrbit3D
+                      districtName={selectedDistrict.name}
+                      villages={villages}
+                      onVillageSelect={handleVillageSelect}
+                      selectedVillageId={selectedVillage?.id}
+                    />
+                  </Suspense>
 
-                    {/* Selected Village Info */}
-                    <AnimatePresence>
-                      {selectedVillage && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="overflow-hidden"
+                  {/* Village selection list */}
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground text-center">
+                      أو اختر من القائمة:
+                    </p>
+                    <div className="grid grid-cols-1 gap-2 max-h-[200px] overflow-y-auto scrollbar-hide">
+                      {villages.map((village) => (
+                        <motion.button
+                          key={village.id}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => handleVillageSelect(village)}
+                          className={`p-3 rounded-xl border transition-all flex items-center justify-between ${
+                            selectedVillage?.id === village.id
+                              ? 'bg-primary/20 border-primary neon-glow'
+                              : 'bg-card border-border/50 hover:border-primary/50'
+                          }`}
                         >
-                          <div className="p-4 rounded-xl bg-primary/10 border border-primary/20 space-y-3">
-                            <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground">المنطقة</span>
-                              <span className="font-bold">{selectedVillage.name}</span>
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                              selectedVillage?.id === village.id
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-muted'
+                            }`}>
+                              <Sparkles className="w-4 h-4" />
                             </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground">رسوم التوصيل</span>
-                              <span className="font-bold text-primary">
+                            <span className="font-medium">{village.name}</span>
+                          </div>
+                          <span className={`text-sm font-bold ${
+                            village.delivery_fee <= 20 ? 'text-green-500' :
+                            village.delivery_fee <= 40 ? 'text-yellow-500' : 'text-primary'
+                          }`}>
+                            {village.delivery_fee} ج.م
+                          </span>
+                        </motion.button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Selected Village Info */}
+                  <AnimatePresence>
+                    {selectedVillage && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="p-4 rounded-xl bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/30 space-y-3">
+                          <div className="flex items-center gap-2">
+                            <Info className="w-5 h-5 text-primary" />
+                            <span className="font-bold">تفاصيل التوصيل</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                              <p className="text-muted-foreground">المركز</p>
+                              <p className="font-bold">{selectedDistrict.name}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground">القرية</p>
+                              <p className="font-bold">{selectedVillage.name}</p>
+                            </div>
+                            <div className="col-span-2">
+                              <p className="text-muted-foreground">رسوم التوصيل</p>
+                              <p className="font-bold text-2xl text-primary neon-text">
                                 {selectedVillage.delivery_fee} ج.م
-                              </span>
+                              </p>
                             </div>
                           </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
-                    {/* Confirm Button */}
-                    <Button
-                      onClick={handleConfirm}
-                      disabled={!selectedVillage}
-                      className="w-full h-14 rounded-xl text-lg font-bold"
-                      size="lg"
-                    >
-                      تأكيد الموقع والمتابعة
-                    </Button>
-                  </>
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground">
-                      لا توجد قرى مضافة لهذا المركز
-                    </p>
-                    <Button
-                      variant="outline"
-                      onClick={handleBack}
-                      className="mt-4"
-                    >
-                      العودة لاختيار مركز آخر
-                    </Button>
-                  </div>
-                )}
-              </div>
+                  {/* Confirm Button */}
+                  <Button
+                    onClick={handleConfirm}
+                    disabled={!selectedVillage}
+                    className="w-full h-14 rounded-xl text-lg font-bold neon-glow"
+                    size="lg"
+                  >
+                    ✨ تأكيد الموقع والمتابعة
+                  </Button>
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">لا توجد قرى مضافة لهذا المركز</p>
+                  <Button variant="outline" onClick={handleBack} className="mt-4">
+                    العودة لاختيار مركز آخر
+                  </Button>
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
       </main>
 
-      {/* Decorative Elements */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-accent/10 rounded-full blur-3xl" />
+      {/* Decorative Background Elements */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-accent/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
       </div>
     </div>
   );
