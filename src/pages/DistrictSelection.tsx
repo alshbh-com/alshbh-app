@@ -67,14 +67,26 @@ const DistrictSelection = () => {
   const navigate = useNavigate();
   const [selectedDistrict, setSelectedDistrict] = useState<District | null>(null);
   const [selectedVillage, setSelectedVillage] = useState<Village | null>(null);
+  const [forceShow, setForceShow] = useState(false);
 
-  // Check if location is already saved
+  // Check if coming from change location action
   useEffect(() => {
-    const savedLocation = localStorage.getItem('alshbh_selected_location');
-    if (savedLocation) {
-      navigate('/home');
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('change') === 'true') {
+      localStorage.removeItem('alshbh_selected_location');
+      setForceShow(true);
     }
-  }, [navigate]);
+  }, []);
+
+  // Check if location is already saved (only redirect if not forcing show)
+  useEffect(() => {
+    if (!forceShow) {
+      const savedLocation = localStorage.getItem('alshbh_selected_location');
+      if (savedLocation) {
+        navigate('/home');
+      }
+    }
+  }, [navigate, forceShow]);
 
   const { data: districts, isLoading: loadingDistricts } = useQuery({
     queryKey: ['districts'],
