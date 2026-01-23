@@ -9,6 +9,8 @@ interface Offer {
   description?: string;
   image?: string;
   discount?: number;
+  price?: number;
+  originalPrice?: number;
 }
 
 interface OffersCarouselProps {
@@ -60,12 +62,17 @@ export const OffersCarousel = ({ offers, onOrderOffer }: OffersCarouselProps) =>
                     )}
                   </div>
                   <div className="flex items-center justify-between">
-                    {offer.discount && (
-                      <div className="flex items-center gap-1">
-                        <Percent className="w-4 h-4" />
-                        <span className="font-bold">خصم {offer.discount}%</span>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {offer.discount && (
+                        <div className="flex items-center gap-1">
+                          <Percent className="w-4 h-4" />
+                          <span className="font-bold">خصم {offer.discount}%</span>
+                        </div>
+                      )}
+                      {offer.price && offer.price > 0 && (
+                        <span className="font-bold text-lg">{offer.price} ج.م</span>
+                      )}
+                    </div>
                     <Button
                       size="sm"
                       variant="secondary"

@@ -645,6 +645,7 @@ export type Database = {
           name_en: string | null
           sort_order: number | null
           updated_at: string | null
+          whatsapp_number: string | null
         }
         Insert: {
           created_at?: string | null
@@ -659,6 +660,7 @@ export type Database = {
           name_en?: string | null
           sort_order?: number | null
           updated_at?: string | null
+          whatsapp_number?: string | null
         }
         Update: {
           created_at?: string | null
@@ -673,6 +675,7 @@ export type Database = {
           name_en?: string | null
           sort_order?: number | null
           updated_at?: string | null
+          whatsapp_number?: string | null
         }
         Relationships: []
       }
@@ -879,6 +882,9 @@ export type Database = {
           id: string
           image_url: string | null
           is_active: boolean | null
+          original_price: number | null
+          price: number | null
+          product_id: string | null
           title: string
           valid_until: string | null
         }
@@ -889,6 +895,9 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          original_price?: number | null
+          price?: number | null
+          product_id?: string | null
           title: string
           valid_until?: string | null
         }
@@ -899,10 +908,21 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          original_price?: number | null
+          price?: number | null
+          product_id?: string | null
           title?: string
           valid_until?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "offers_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       orders: {
         Row: {

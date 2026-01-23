@@ -7,11 +7,15 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 
 interface SavedLocation {
-  districtId: string;
-  districtName: string;
-  villageId: string;
-  villageName: string;
-  deliveryFee: number;
+  district: {
+    id: string;
+    name: string;
+  };
+  village: {
+    id: string;
+    name: string;
+    deliveryFee: number;
+  };
 }
 
 const PLATFORM_FEE_PER_ITEM = 10; // رسوم المنصة لكل قطعة
@@ -34,7 +38,7 @@ const Cart = () => {
     }
   }, []);
 
-  const deliveryFee = location?.deliveryFee || 0;
+  const deliveryFee = location?.village?.deliveryFee || 0;
   const itemCount = getItemCount();
   const platformFee = itemCount * PLATFORM_FEE_PER_ITEM;
   const grandTotal = subtotal + deliveryFee + platformFee;
@@ -70,9 +74,9 @@ const Cart = () => {
                 <p className="text-sm text-muted-foreground">التوصيل إلى</p>
                 {location ? (
                   <>
-                    <p className="font-bold">{location.villageName}</p>
+                    <p className="font-bold">{location.village.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {location.districtName}
+                      {location.district.name}
                     </p>
                   </>
                 ) : (
@@ -203,7 +207,7 @@ const Cart = () => {
               </div>
               
               <div className="flex justify-between items-center mb-3">
-                <span className="text-muted-foreground">رسوم التوصيل ({location?.villageName || 'غير محدد'})</span>
+                <span className="text-muted-foreground">رسوم التوصيل ({location?.village?.name || 'غير محدد'})</span>
                 <span className="font-bold text-primary">{deliveryFee} ج.م</span>
               </div>
               

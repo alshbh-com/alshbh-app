@@ -20,6 +20,8 @@ interface District {
   description: string | null;
   image_url: string | null;
   default_delivery_fee: number | null;
+  whatsapp_number: string | null;
+  villages_count?: number;
 }
 
 interface Village {
@@ -30,14 +32,20 @@ interface Village {
 }
 
 const fetchDistricts = async (): Promise<District[]> => {
+  // Fetch districts with village count
   const { data, error } = await supabase
     .from('districts')
-    .select('*')
+    .select('*, villages(id)')
     .eq('is_active', true)
     .order('sort_order', { ascending: true });
 
   if (error) throw error;
-  return data || [];
+  
+  // Add villages count to each district
+  return (data || []).map((d: any) => ({
+    ...d,
+    villages_count: d.villages?.length || 0,
+  }));
 };
 
 const fetchVillages = async (districtId: string): Promise<Village[]> => {
@@ -94,6 +102,7 @@ const DistrictSelection = () => {
         district: {
           id: selectedDistrict.id,
           name: selectedDistrict.name,
+          whatsappNumber: selectedDistrict.whatsapp_number,
         },
         village: {
           id: selectedVillage.id,
@@ -201,6 +210,13 @@ const DistrictSelection = () => {
                           <p className="text-sm text-muted-foreground line-clamp-2">
                             {district.description}
                           </p>
+                        )}
+                        {/* Villages count badge */}
+                        {district.villages_count && district.villages_count > 0 && (
+                          <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-accent/50 text-xs text-accent-foreground">
+                            <MapPin className="w-3 h-3" />
+                            <span>{district.villages_count} قرية</span>
+                          </div>
                         )}
                         {district.default_delivery_fee && (
                           <div className="flex items-center gap-2 text-sm text-primary font-medium">

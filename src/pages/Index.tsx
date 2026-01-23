@@ -6,6 +6,8 @@ import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useCartStore } from '@/stores/cartStore';
+import { toast } from 'sonner';
 
 // Fetch restaurants (sub_categories)
 const fetchRestaurants = async () => {
@@ -32,6 +34,8 @@ const fetchOffers = async () => {
 };
 
 const Index = () => {
+  const addItem = useCartStore((state) => state.addItem);
+
   const { data: restaurants, isLoading: loadingRestaurants } = useQuery({
     queryKey: ['restaurants'],
     queryFn: fetchRestaurants,
@@ -41,6 +45,23 @@ const Index = () => {
     queryKey: ['offers'],
     queryFn: fetchOffers,
   });
+
+  const handleOrderOffer = (offer: { id: string; title: string; description?: string; image?: string; price?: number }) => {
+    if (!offer.price || offer.price <= 0) {
+      toast.error('هذا العرض غير متاح للطلب المباشر');
+      return;
+    }
+
+    addItem({
+      productId: `offer-${offer.id}`,
+      name: `عرض: ${offer.title}`,
+      price: offer.price,
+      image: offer.image,
+      quantity: 1,
+    });
+
+    toast.success('تمت إضافة العرض للسلة');
+  };
 
   return (
     <AppLayout showSearch={false}>
@@ -56,10 +77,20 @@ const Index = () => {
             description: o.description || undefined,
             image: o.image_url || undefined,
             discount: o.discount_percentage || undefined,
+            price: (o as any).price || undefined,
+            originalPrice: (o as any).original_price || undefined,
           }))}
           onOrderOffer={(offerId) => {
-            // TODO: Navigate to offer details or add to cart
-            console.log('Order offer:', offerId);
+            const offer = offers.find((o) => o.id === offerId);
+            if (offer) {
+              handleOrderOffer({
+                id: offer.id,
+                title: offer.title,
+                description: offer.description || undefined,
+                image: offer.image_url || undefined,
+                price: (offer as any).price || undefined,
+              });
+            }
           }}
         />
       )}
