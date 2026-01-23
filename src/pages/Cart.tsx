@@ -7,24 +7,20 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 
 interface SavedLocation {
-  district: {
-    id: string;
-    name: string;
-  };
-  village: {
-    id: string;
-    name: string;
-    deliveryFee: number;
-  };
+  districtId: string;
+  districtName: string;
+  villageId: string;
+  villageName: string;
+  deliveryFee: number;
 }
 
-const PLATFORM_FEE = 10; // رسوم المنصة الثابتة
+const PLATFORM_FEE_PER_ITEM = 10; // رسوم المنصة لكل قطعة
 
 const Cart = () => {
   const navigate = useNavigate();
-  const { items, updateQuantity, removeItem, getTotal, clearCart } = useCartStore();
+  const { items, updateQuantity, removeItem, getTotal, clearCart, getItemCount } = useCartStore();
   const [location, setLocation] = useState<SavedLocation | null>(null);
-  const total = getTotal();
+  const subtotal = getTotal();
 
   // Load saved location
   useEffect(() => {
@@ -38,8 +34,10 @@ const Cart = () => {
     }
   }, []);
 
-  const deliveryFee = location?.village?.deliveryFee || 0;
-  const grandTotal = total + deliveryFee + PLATFORM_FEE;
+  const deliveryFee = location?.deliveryFee || 0;
+  const itemCount = getItemCount();
+  const platformFee = itemCount * PLATFORM_FEE_PER_ITEM;
+  const grandTotal = subtotal + deliveryFee + platformFee;
 
   const handleChangeLocation = () => {
     localStorage.removeItem('alshbh_selected_location');
@@ -72,9 +70,9 @@ const Cart = () => {
                 <p className="text-sm text-muted-foreground">التوصيل إلى</p>
                 {location ? (
                   <>
-                    <p className="font-bold">{location.village.name}</p>
+                    <p className="font-bold">{location.villageName}</p>
                     <p className="text-xs text-muted-foreground">
-                      {location.district.name}
+                      {location.districtName}
                     </p>
                   </>
                 ) : (
@@ -201,17 +199,17 @@ const Cart = () => {
             >
               <div className="flex justify-between items-center mb-3">
                 <span className="text-muted-foreground">المجموع</span>
-                <span className="font-bold">{total} ج.م</span>
+                <span className="font-bold">{subtotal} ج.م</span>
               </div>
               
               <div className="flex justify-between items-center mb-3">
-                <span className="text-muted-foreground">رسوم التوصيل ({location?.village?.name || 'غير محدد'})</span>
+                <span className="text-muted-foreground">رسوم التوصيل ({location?.villageName || 'غير محدد'})</span>
                 <span className="font-bold text-primary">{deliveryFee} ج.م</span>
               </div>
               
               <div className="flex justify-between items-center mb-4">
-                <span className="text-muted-foreground">رسوم المنصة</span>
-                <span className="font-medium">{PLATFORM_FEE} ج.م</span>
+                <span className="text-muted-foreground">رسوم المنصة ({itemCount} قطعة × 10)</span>
+                <span className="font-medium text-accent-foreground">{platformFee} ج.م</span>
               </div>
               
               <div className="border-t pt-4 flex justify-between items-center">
