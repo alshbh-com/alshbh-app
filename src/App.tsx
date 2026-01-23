@@ -2,9 +2,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import DistrictSelection from "./pages/DistrictSelection";
+
+// Helper to check if location is set
+const hasLocation = () => !!localStorage.getItem('alshbh_selected_location');
 import Cart from "./pages/Cart";
 import Restaurants from "./pages/Restaurants";
 import Favorites from "./pages/Favorites";
@@ -39,6 +42,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<DistrictSelection />} />
           <Route path="/home" element={<Index />} />
+          <Route path="/select-location" element={<DistrictSelection />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/restaurants" element={<Restaurants />} />
