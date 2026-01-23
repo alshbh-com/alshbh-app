@@ -57,6 +57,10 @@ const Index = () => {
             image: o.image_url || undefined,
             discount: o.discount_percentage || undefined,
           }))}
+          onOrderOffer={(offerId) => {
+            // TODO: Navigate to offer details or add to cart
+            console.log('Order offer:', offerId);
+          }}
         />
       )}
 
