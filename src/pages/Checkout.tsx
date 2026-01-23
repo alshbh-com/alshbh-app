@@ -1,8 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, MapPin, Phone, User, FileText, Send, ChevronDown } from 'lucide-react';
+import { ArrowRight, MapPin, Phone, User, FileText, Send, Navigation } from 'lucide-react';
 import { useCartStore } from '@/stores/cartStore';
 import { useUserStore } from '@/stores/userStore';
 import { Button } from '@/components/ui/button';
@@ -10,55 +9,68 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+
+const PLATFORM_FEE_PER_ITEM = 10; // 10 EGP per item
+
+interface SavedLocation {
+  districtId: string;
+  districtName: string;
+  villageId: string;
+  villageName: string;
+  deliveryFee: number;
+}
 
 const Checkout = () => {
   const navigate = useNavigate();
-  const { items, getTotal, clearCart } = useCartStore();
+  const { items, getTotal, clearCart, getItemCount } = useCartStore();
   const { name, phone, address, setUserInfo } = useUserStore();
+  const [savedLocation, setSavedLocation] = useState<SavedLocation | null>(null);
   
   const [formData, setFormData] = useState({
     name: name || '',
     phone: phone || '',
     address: address || '',
     notes: '',
-    cityId: '',
   });
   const [loading, setLoading] = useState(false);
 
-  // Fetch cities
-  const { data: cities } = useQuery({
-    queryKey: ['checkout-cities'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('allowed_cities')
-        .select('*')
-        .eq('is_active', true)
-        .order('name', { ascending: true });
-      if (error) throw error;
-      return data;
-    },
-  });
+  // Load saved location from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('alshbh_selected_location');
+    if (saved) {
+      try {
+        setSavedLocation(JSON.parse(saved));
+      } catch (e) {
+        console.error('Error parsing saved location:', e);
+      }
+    }
+  }, []);
 
-  const selectedCity = cities?.find(c => c.id === formData.cityId);
-  const deliveryFee = selectedCity?.delivery_price || 0;
-  const total = getTotal() + deliveryFee;
+  const deliveryFee = savedLocation?.deliveryFee || 0;
+  const platformFee = getItemCount() * PLATFORM_FEE_PER_ITEM;
+  const subtotal = getTotal();
+  const total = subtotal + deliveryFee + platformFee;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleChangeLocation = () => {
+    localStorage.removeItem('alshbh_selected_location');
+    navigate('/');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.phone || !formData.cityId) {
+    if (!formData.name || !formData.phone) {
       toast.error('يرجى ملء جميع البيانات المطلوبة');
+      return;
+    }
+
+    if (!savedLocation) {
+      toast.error('يرجى اختيار منطقة التوصيل');
+      navigate('/');
       return;
     }
 
@@ -84,7 +96,8 @@ const Checkout = () => {
       let message = `🍽️ *طلب جديد من الشبح - #${orderNumber}*\n\n`;
       message += `👤 *الاسم:* ${formData.name}\n`;
       message += `📱 *الهاتف:* ${formData.phone}\n`;
-      message += `📍 *المنطقة:* ${selectedCity?.name || 'غير محدد'}\n`;
+      message += `📍 *المركز:* ${savedLocation.districtName}\n`;
+      message += `🏘️ *القرية:* ${savedLocation.villageName}\n`;
       if (formData.address) {
         message += `🏠 *العنوان:* ${formData.address}\n`;
       }
@@ -102,15 +115,20 @@ const Checkout = () => {
       });
 
       message += `\n━━━━━━━━━━━━━━━\n`;
-      message += `💰 *المجموع:* ${getTotal()} ج.م\n`;
-      message += `🚚 *التوصيل:* ${deliveryFee} ج.م\n`;
+      message += `💰 *المجموع:* ${subtotal} ج.م\n`;
+      message += `🚚 *التوصيل (${savedLocation.villageName}):* ${deliveryFee} ج.م\n`;
+      message += `📦 *رسوم المنصة (${getItemCount()} قطعة × 10):* ${platformFee} ج.م\n`;
       message += `💵 *الإجمالي:* ${total} ج.م`;
 
       // Save order to database
       const orderData = {
         customer_name: formData.name,
         customer_phone: formData.phone,
-        customer_city: selectedCity?.name || '',
+        customer_city: savedLocation.districtName,
+        district_id: savedLocation.districtId,
+        district_name: savedLocation.districtName,
+        village_id: savedLocation.villageId,
+        village_name: savedLocation.villageName,
         customer_location: formData.address,
         items: items.map((item) => ({
           name: item.name,
@@ -120,6 +138,7 @@ const Checkout = () => {
         })),
         total_amount: total,
         delivery_fee: deliveryFee,
+        platform_fee: platformFee,
         status: 'pending',
       };
 
@@ -153,7 +172,20 @@ const Checkout = () => {
           <div className="text-6xl mb-4">🛒</div>
           <h2 className="text-xl font-bold mb-2">السلة فارغة</h2>
           <p className="text-muted-foreground mb-4">أضف بعض الأصناف للمتابعة</p>
-          <Button onClick={() => navigate('/')}>تصفح المطاعم</Button>
+          <Button onClick={() => navigate('/home')}>تصفح المطاعم</Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!savedLocation) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="text-6xl mb-4">📍</div>
+          <h2 className="text-xl font-bold mb-2">اختر منطقة التوصيل</h2>
+          <p className="text-muted-foreground mb-4">يرجى اختيار المركز والقرية أولاً</p>
+          <Button onClick={() => navigate('/')}>اختيار المنطقة</Button>
         </div>
       </div>
     );
@@ -173,10 +205,37 @@ const Checkout = () => {
       </header>
 
       <div className="container p-4 max-w-lg mx-auto">
+        {/* Delivery Location Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl p-4 mb-6 border border-primary/20"
+        >
+          <div className="flex items-start justify-between">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                <Navigation className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">التوصيل إلى</p>
+                <p className="font-bold text-lg">{savedLocation.districtName}</p>
+                <p className="text-primary font-medium">{savedLocation.villageName}</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  سعر التوصيل: <span className="font-bold text-foreground">{deliveryFee} ج.م</span>
+                </p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleChangeLocation}>
+              تغيير
+            </Button>
+          </div>
+        </motion.div>
+
         {/* Order Summary */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
           className="bg-card rounded-2xl p-4 mb-6 shadow-soft"
         >
           <h2 className="font-bold mb-4">ملخص الطلب</h2>
@@ -189,16 +248,20 @@ const Checkout = () => {
                 <span className="font-medium">{item.price * item.quantity} ج.م</span>
               </div>
             ))}
-            <div className="border-t pt-3 mt-3">
+            <div className="border-t pt-3 mt-3 space-y-2">
               <div className="flex justify-between text-sm">
                 <span>المجموع</span>
-                <span>{getTotal()} ج.م</span>
+                <span>{subtotal} ج.م</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span>رسوم التوصيل</span>
-                <span>{deliveryFee > 0 ? `${deliveryFee} ج.م` : 'اختر المنطقة'}</span>
+                <span>التوصيل ({savedLocation.villageName})</span>
+                <span className="text-primary font-medium">{deliveryFee} ج.م</span>
               </div>
-              <div className="flex justify-between font-bold text-lg mt-2">
+              <div className="flex justify-between text-sm">
+                <span>رسوم المنصة ({getItemCount()} قطعة × 10)</span>
+                <span className="text-orange-500 font-medium">{platformFee} ج.م</span>
+              </div>
+              <div className="flex justify-between font-bold text-lg mt-2 pt-2 border-t">
                 <span>الإجمالي</span>
                 <span className="text-primary">{total} ج.م</span>
               </div>
@@ -210,7 +273,7 @@ const Checkout = () => {
         <motion.form
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+          transition={{ delay: 0.2 }}
           onSubmit={handleSubmit}
           className="space-y-4"
         >
@@ -241,32 +304,6 @@ const Checkout = () => {
             />
           </div>
 
-          {/* City Selection */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <MapPin className="w-4 h-4" />
-              اختر المنطقة *
-            </label>
-            <Select
-              value={formData.cityId}
-              onValueChange={(value) => setFormData({ ...formData, cityId: value })}
-            >
-              <SelectTrigger className="h-12 rounded-xl">
-                <SelectValue placeholder="اختر منطقتك" />
-              </SelectTrigger>
-              <SelectContent>
-                {cities?.map((city) => (
-                  <SelectItem key={city.id} value={city.id}>
-                    <div className="flex items-center justify-between w-full">
-                      <span>{city.name}</span>
-                      <span className="text-primary mr-4">توصيل: {city.delivery_price} ج.م</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="relative">
             <MapPin className="absolute right-3 top-3 w-5 h-5 text-muted-foreground" />
             <Textarea
@@ -292,7 +329,7 @@ const Checkout = () => {
           <Button
             type="submit"
             className="w-full h-14 text-lg rounded-xl"
-            disabled={loading || !formData.cityId}
+            disabled={loading}
           >
             {loading ? (
               <span className="flex items-center gap-2">
