@@ -1,15 +1,71 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, Bell, Moon, Globe, Trash2, Info, Shield } from 'lucide-react';
+import { ArrowRight, Bell, Moon, Trash2, Info, Shield, Volume2, BellRing, Type, FileText, HelpCircle, Star, Share2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { ShareApp } from '@/components/ShareApp';
+import { RateApp } from '@/components/RateApp';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const Settings = () => {
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
+  
+  // Load settings from localStorage
+  const [orderNotifications, setOrderNotifications] = useState(() => 
+    localStorage.getItem('settings_order_notifications') !== 'false'
+  );
+  const [offerNotifications, setOfferNotifications] = useState(() => 
+    localStorage.getItem('settings_offer_notifications') !== 'false'
+  );
+  const [updateNotifications, setUpdateNotifications] = useState(() => 
+    localStorage.getItem('settings_update_notifications') !== 'false'
+  );
+  const [soundEnabled, setSoundEnabled] = useState(() => 
+    localStorage.getItem('settings_sound') !== 'false'
+  );
+  const [darkMode, setDarkMode] = useState(() => 
+    localStorage.getItem('settings_dark_mode') === 'true'
+  );
+  const [fontSize, setFontSize] = useState(() => 
+    localStorage.getItem('settings_font_size') || 'medium'
+  );
+
+  // Save settings to localStorage
+  useEffect(() => {
+    localStorage.setItem('settings_order_notifications', String(orderNotifications));
+  }, [orderNotifications]);
+
+  useEffect(() => {
+    localStorage.setItem('settings_offer_notifications', String(offerNotifications));
+  }, [offerNotifications]);
+
+  useEffect(() => {
+    localStorage.setItem('settings_update_notifications', String(updateNotifications));
+  }, [updateNotifications]);
+
+  useEffect(() => {
+    localStorage.setItem('settings_sound', String(soundEnabled));
+  }, [soundEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem('settings_dark_mode', String(darkMode));
+    document.documentElement.classList.toggle('dark', darkMode);
+  }, [darkMode]);
+
+  useEffect(() => {
+    localStorage.setItem('settings_font_size', fontSize);
+    document.documentElement.style.fontSize = 
+      fontSize === 'small' ? '14px' : 
+      fontSize === 'large' ? '18px' : '16px';
+  }, [fontSize]);
 
   const handleClearData = () => {
     if (confirm('هل أنت متأكد من حذف جميع البيانات المحفوظة؟')) {
@@ -29,8 +85,41 @@ const Settings = () => {
           description: 'تلقي إشعارات عند تحديث حالة الطلب',
           action: (
             <Switch
-              checked={notifications}
-              onCheckedChange={setNotifications}
+              checked={orderNotifications}
+              onCheckedChange={setOrderNotifications}
+            />
+          ),
+        },
+        {
+          icon: BellRing,
+          label: 'إشعارات العروض',
+          description: 'تلقي إشعارات بالعروض والخصومات',
+          action: (
+            <Switch
+              checked={offerNotifications}
+              onCheckedChange={setOfferNotifications}
+            />
+          ),
+        },
+        {
+          icon: Bell,
+          label: 'إشعارات التحديثات',
+          description: 'إشعارات بالميزات الجديدة',
+          action: (
+            <Switch
+              checked={updateNotifications}
+              onCheckedChange={setUpdateNotifications}
+            />
+          ),
+        },
+        {
+          icon: Volume2,
+          label: 'صوت الإشعارات',
+          description: 'تشغيل صوت عند وصول إشعار',
+          action: (
+            <Switch
+              checked={soundEnabled}
+              onCheckedChange={setSoundEnabled}
             />
           ),
         },
@@ -46,10 +135,72 @@ const Settings = () => {
           action: (
             <Switch
               checked={darkMode}
-              onCheckedChange={(checked) => {
-                setDarkMode(checked);
-                document.documentElement.classList.toggle('dark', checked);
-              }}
+              onCheckedChange={setDarkMode}
+            />
+          ),
+        },
+        {
+          icon: Type,
+          label: 'حجم الخط',
+          description: 'تخصيص حجم النصوص',
+          action: (
+            <Select value={fontSize} onValueChange={setFontSize}>
+              <SelectTrigger className="w-24 h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="small">صغير</SelectItem>
+                <SelectItem value="medium">متوسط</SelectItem>
+                <SelectItem value="large">كبير</SelectItem>
+              </SelectContent>
+            </Select>
+          ),
+        },
+      ],
+    },
+    {
+      title: 'المساعدة',
+      items: [
+        {
+          icon: HelpCircle,
+          label: 'الأسئلة الشائعة',
+          description: 'إجابات لأكثر الأسئلة شيوعاً',
+          onClick: () => navigate('/faq'),
+        },
+        {
+          icon: FileText,
+          label: 'شروط الاستخدام',
+          description: 'شروط وأحكام التطبيق',
+          onClick: () => navigate('/terms'),
+        },
+        {
+          icon: Shield,
+          label: 'سياسة الخصوصية',
+          description: 'اقرأ سياسة الخصوصية الخاصة بنا',
+          onClick: () => navigate('/privacy'),
+        },
+      ],
+    },
+    {
+      title: 'شارك وقيّم',
+      items: [
+        {
+          icon: Share2,
+          label: 'مشاركة التطبيق',
+          description: 'شارك التطبيق مع أصدقائك',
+          action: <ShareApp variant="icon" />,
+        },
+        {
+          icon: Star,
+          label: 'تقييم التطبيق',
+          description: 'أخبرنا برأيك في التطبيق',
+          action: (
+            <RateApp 
+              trigger={
+                <Button variant="ghost" size="icon">
+                  <Star className="w-5 h-5" />
+                </Button>
+              }
             />
           ),
         },
@@ -73,12 +224,6 @@ const Settings = () => {
             </Button>
           ),
         },
-        {
-          icon: Shield,
-          label: 'سياسة الخصوصية',
-          description: 'اقرأ سياسة الخصوصية الخاصة بنا',
-          onClick: () => navigate('/privacy'),
-        },
       ],
     },
     {
@@ -88,11 +233,6 @@ const Settings = () => {
           icon: Info,
           label: 'الإصدار',
           description: '1.0.0',
-        },
-        {
-          icon: Globe,
-          label: 'اللغة',
-          description: 'العربية',
         },
       ],
     },

@@ -22,6 +22,10 @@ import Search from "./pages/Search";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import NotFound from "./pages/NotFound";
+import FAQ from "./pages/FAQ";
+import Terms from "./pages/Terms";
+import EditProfile from "./pages/EditProfile";
+import MyStats from "./pages/MyStats";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -56,6 +60,10 @@ const App = () => (
           <Route path="/search" element={<Search />} />
           <Route path="/admin" element={<AdminLogin />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/faq" element={<FAQ />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/edit-profile" element={<EditProfile />} />
+          <Route path="/my-stats" element={<MyStats />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
