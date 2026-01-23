@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, ChevronLeft, Sparkles, Navigation, Store, Truck, Info } from 'lucide-react';
@@ -7,9 +7,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// Lazy load 3D components for better performance
-const DistrictMap3D = lazy(() => import('@/components/3d/DistrictMap3D'));
-const VillageOrbit3D = lazy(() => import('@/components/3d/VillageOrbit3D'));
+import DistrictMap3D from '@/components/3d/DistrictMap3D';
+import VillageOrbit3D from '@/components/3d/VillageOrbit3D';
 
 interface District {
   id: string;
@@ -181,13 +180,11 @@ const DistrictSelection = () => {
               {loadingDistricts ? (
                 <Map3DFallback />
               ) : districts && districts.length > 0 ? (
-                <Suspense fallback={<Map3DFallback />}>
-                  <DistrictMap3D
-                    districts={districts}
-                    onDistrictSelect={handleDistrictSelect}
-                    selectedDistrictId={undefined}
-                  />
-                </Suspense>
+                <DistrictMap3D
+                  districts={districts}
+                  onDistrictSelect={handleDistrictSelect}
+                  selectedDistrictId={undefined}
+                />
               ) : (
                 <motion.div
                   initial={{ opacity: 0 }}
@@ -281,14 +278,12 @@ const DistrictSelection = () => {
                 <Map3DFallback />
               ) : villages && villages.length > 0 ? (
                 <>
-                  <Suspense fallback={<Map3DFallback />}>
-                    <VillageOrbit3D
-                      districtName={selectedDistrict.name}
-                      villages={villages}
-                      onVillageSelect={handleVillageSelect}
-                      selectedVillageId={selectedVillage?.id}
-                    />
-                  </Suspense>
+                  <VillageOrbit3D
+                    districtName={selectedDistrict.name}
+                    villages={villages}
+                    onVillageSelect={handleVillageSelect}
+                    selectedVillageId={selectedVillage?.id}
+                  />
 
                   {/* Village selection list */}
                   <div className="space-y-2">
