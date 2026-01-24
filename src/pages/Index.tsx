@@ -1,6 +1,5 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import { HeroBanner } from '@/components/home/HeroBanner';
-import { OffersCarousel } from '@/components/home/OffersCarousel';
 import { CategoryCard } from '@/components/home/CategoryCard';
 import { QuickCategories } from '@/components/home/QuickCategories';
 import { ExclusiveOffers } from '@/components/home/ExclusiveOffers';
@@ -8,8 +7,6 @@ import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useCartStore } from '@/stores/cartStore';
-import { toast } from 'sonner';
 
 // Fetch restaurants (sub_categories)
 const fetchRestaurants = async () => {
@@ -23,47 +20,11 @@ const fetchRestaurants = async () => {
   return data;
 };
 
-// Fetch offers
-const fetchOffers = async () => {
-  const { data, error } = await supabase
-    .from('offers')
-    .select('*')
-    .eq('is_active', true)
-    .order('created_at', { ascending: false });
-
-  if (error) throw error;
-  return data;
-};
-
 const Index = () => {
-  const addItem = useCartStore((state) => state.addItem);
-
   const { data: restaurants, isLoading: loadingRestaurants } = useQuery({
     queryKey: ['restaurants'],
     queryFn: fetchRestaurants,
   });
-
-  const { data: offers, isLoading: loadingOffers } = useQuery({
-    queryKey: ['offers'],
-    queryFn: fetchOffers,
-  });
-
-  const handleOrderOffer = (offer: { id: string; title: string; description?: string; image?: string; price?: number }) => {
-    if (!offer.price || offer.price <= 0) {
-      toast.error('هذا العرض غير متاح للطلب المباشر');
-      return;
-    }
-
-    addItem({
-      productId: `offer-${offer.id}`,
-      name: `عرض: ${offer.title}`,
-      price: offer.price,
-      image: offer.image,
-      quantity: 1,
-    });
-
-    toast.success('تمت إضافة العرض للسلة');
-  };
 
   return (
     <AppLayout showSearch={false}>
@@ -75,33 +36,6 @@ const Index = () => {
 
       {/* Exclusive Offers */}
       <ExclusiveOffers />
-
-      {/* Offers Carousel */}
-      {!loadingOffers && offers && offers.length > 0 && (
-        <OffersCarousel
-          offers={offers.map((o) => ({
-            id: o.id,
-            title: o.title,
-            description: o.description || undefined,
-            image: o.image_url || undefined,
-            discount: o.discount_percentage || undefined,
-            price: (o as any).price || undefined,
-            originalPrice: (o as any).original_price || undefined,
-          }))}
-          onOrderOffer={(offerId) => {
-            const offer = offers.find((o) => o.id === offerId);
-            if (offer) {
-              handleOrderOffer({
-                id: offer.id,
-                title: offer.title,
-                description: offer.description || undefined,
-                image: offer.image_url || undefined,
-                price: (offer as any).price || undefined,
-              });
-            }
-          }}
-        />
-      )}
 
       {/* Restaurants Section */}
       <section className="py-6 px-4">
