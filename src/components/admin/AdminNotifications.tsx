@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Send, Bell, Users, Clock } from 'lucide-react';
+import { Plus, Send, Bell, Users, Clock, CheckCircle2, AlertCircle, Smartphone } from 'lucide-react';
 
 interface NotificationForm {
   title: string;
@@ -39,6 +39,19 @@ export const AdminNotifications = () => {
     target_audience: 'all',
   });
 
+  // Fetch device count
+  const { data: deviceCount } = useQuery({
+    queryKey: ['device-count'],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('user_devices')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_active', true);
+      if (error) throw error;
+      return count || 0;
+    },
+  });
+
   const { data: notifications, isLoading } = useQuery({
     queryKey: ['admin-notifications'],
     queryFn: async () => {
@@ -54,17 +67,37 @@ export const AdminNotifications = () => {
 
   const sendMutation = useMutation({
     mutationFn: async (data: NotificationForm) => {
-      const { error } = await supabase.from('notifications').insert({
-        title: data.title,
-        message: data.message,
-        image_url: data.image_url || null,
-        target_audience: data.target_audience,
-        status: 'sent',
-        sent_at: new Date().toISOString(),
+      // First, create the notification record
+      const { data: notification, error: insertError } = await supabase
+        .from('notifications')
+        .insert({
+          title: data.title,
+          message: data.message,
+          image_url: data.image_url || null,
+          target_audience: data.target_audience,
+          status: 'sending',
+        })
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+
+      // Then, call the edge function to send push notifications
+      const { data: result, error: fnError } = await supabase.functions.invoke('send-notification', {
+        body: {
+          title: data.title,
+          message: data.message,
+          image_url: data.image_url || null,
+          target_audience: data.target_audience,
+          notification_id: notification.id,
+        },
       });
-      if (error) throw error;
+
+      if (fnError) throw fnError;
+
+      return result;
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['admin-notifications'] });
       setShowModal(false);
       setForm({
@@ -73,9 +106,17 @@ export const AdminNotifications = () => {
         image_url: '',
         target_audience: 'all',
       });
-      toast.success('تم إرسال الإشعار بنجاح');
+      
+      if (result.sent_count > 0) {
+        toast.success(`تم إرسال الإشعار إلى ${result.sent_count} جهاز`);
+      } else {
+        toast.info('لا توجد أجهزة مسجلة لاستقبال الإشعارات');
+      }
     },
-    onError: () => toast.error('حدث خطأ في إرسال الإشعار'),
+    onError: (error: any) => {
+      console.error('Error sending notification:', error);
+      toast.error(error.message || 'حدث خطأ في إرسال الإشعار');
+    },
   });
 
   if (isLoading) {
@@ -89,129 +130,172 @@ export const AdminNotifications = () => {
   }
 
   return (
-    <div className="bg-card rounded-2xl p-4 shadow-soft">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Bell className="w-5 h-5 text-primary" />
-          <h2 className="font-bold">الإشعارات</h2>
+    <div className="space-y-4">
+      {/* Stats Card */}
+      <div className="bg-gradient-to-l from-primary to-accent rounded-2xl p-4 text-primary-foreground">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm opacity-90">الأجهزة المسجلة</p>
+            <p className="text-3xl font-bold">{deviceCount || 0}</p>
+          </div>
+          <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
+            <Smartphone className="w-6 h-6" />
+          </div>
         </div>
-        <Button onClick={() => setShowModal(true)}>
-          <Plus className="w-4 h-4 ml-2" />
-          إرسال إشعار
-        </Button>
       </div>
 
-      {notifications && notifications.length > 0 ? (
-        <div className="space-y-3">
-          {notifications.map((notification) => (
-            <motion.div
-              key={notification.id}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="p-4 bg-muted rounded-xl"
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-bold">{notification.title}</h3>
-                  <p className="text-sm text-muted-foreground mt-1">{notification.message}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs px-2 py-1 rounded-full ${
-                    notification.status === 'sent' ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'
-                  }`}>
-                    {notification.status === 'sent' ? 'تم الإرسال' : 'مجدول'}
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <Users className="w-3 h-3" />
-                  <span>
-                    {notification.target_audience === 'all' ? 'الجميع' : notification.target_audience}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
-                  <span>
-                    {notification.sent_at 
-                      ? new Date(notification.sent_at).toLocaleDateString('ar-EG', { 
-                          year: 'numeric', 
-                          month: 'short', 
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })
-                      : 'لم يرسل'
-                    }
-                  </span>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      ) : (
-        <p className="text-center text-muted-foreground py-8">لا توجد إشعارات</p>
-      )}
-
-      {/* Modal */}
-      <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>إرسال إشعار جديد</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">العنوان</label>
-              <Input
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                placeholder="عنوان الإشعار..."
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">الرسالة</label>
-              <Textarea
-                value={form.message}
-                onChange={(e) => setForm({ ...form, message: e.target.value })}
-                placeholder="نص الإشعار..."
-                rows={3}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">رابط الصورة (اختياري)</label>
-              <Input
-                value={form.image_url}
-                onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-                placeholder="https://..."
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">الجمهور المستهدف</label>
-              <Select
-                value={form.target_audience}
-                onValueChange={(value) => setForm({ ...form, target_audience: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">الجميع</SelectItem>
-                  <SelectItem value="new_users">المستخدمون الجدد</SelectItem>
-                  <SelectItem value="active_users">المستخدمون النشطون</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button 
-              className="w-full" 
-              onClick={() => sendMutation.mutate(form)}
-              disabled={sendMutation.isPending || !form.title || !form.message}
-            >
-              <Send className="w-4 h-4 ml-2" />
-              {sendMutation.isPending ? 'جاري الإرسال...' : 'إرسال الإشعار'}
-            </Button>
+      <div className="bg-card rounded-2xl p-4 shadow-soft">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Bell className="w-5 h-5 text-primary" />
+            <h2 className="font-bold">الإشعارات</h2>
           </div>
-        </DialogContent>
-      </Dialog>
+          <Button onClick={() => setShowModal(true)}>
+            <Plus className="w-4 h-4 ml-2" />
+            إرسال إشعار
+          </Button>
+        </div>
+
+        {notifications && notifications.length > 0 ? (
+          <div className="space-y-3">
+            {notifications.map((notification) => (
+              <motion.div
+                key={notification.id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="p-4 bg-muted rounded-xl"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h3 className="font-bold">{notification.title}</h3>
+                    <p className="text-sm text-muted-foreground mt-1">{notification.message}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {notification.status === 'sent' ? (
+                      <span className="flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-success/20 text-success">
+                        <CheckCircle2 className="w-3 h-3" />
+                        تم الإرسال ({notification.sent_count || 0})
+                      </span>
+                    ) : notification.status === 'sending' ? (
+                      <span className="flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-warning/20 text-warning">
+                        <Clock className="w-3 h-3 animate-spin" />
+                        جاري الإرسال
+                      </span>
+                    ) : notification.status === 'failed' ? (
+                      <span className="flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-destructive/20 text-destructive">
+                        <AlertCircle className="w-3 h-3" />
+                        فشل الإرسال
+                      </span>
+                    ) : (
+                      <span className="text-xs px-2 py-1 rounded-full bg-muted-foreground/20 text-muted-foreground">
+                        مسودة
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <Users className="w-3 h-3" />
+                    <span>
+                      {notification.target_audience === 'all' ? 'الجميع' : notification.target_audience}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    <span>
+                      {notification.sent_at 
+                        ? new Date(notification.sent_at).toLocaleDateString('ar-EG', { 
+                            year: 'numeric', 
+                            month: 'short', 
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })
+                        : new Date(notification.created_at).toLocaleDateString('ar-EG', { 
+                            year: 'numeric', 
+                            month: 'short', 
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })
+                      }
+                    </span>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-center text-muted-foreground py-8">لا توجد إشعارات</p>
+        )}
+
+        {/* Modal */}
+        <Dialog open={showModal} onOpenChange={setShowModal}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>إرسال إشعار جديد</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="p-3 bg-muted rounded-lg text-sm">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Smartphone className="w-4 h-4" />
+                  <span>سيتم إرسال الإشعار إلى {deviceCount || 0} جهاز مسجل</span>
+                </div>
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium">العنوان</label>
+                <Input
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  placeholder="عنوان الإشعار..."
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">الرسالة</label>
+                <Textarea
+                  value={form.message}
+                  onChange={(e) => setForm({ ...form, message: e.target.value })}
+                  placeholder="نص الإشعار..."
+                  rows={3}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">رابط الصورة (اختياري)</label>
+                <Input
+                  value={form.image_url}
+                  onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+                  placeholder="https://..."
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">الجمهور المستهدف</label>
+                <Select
+                  value={form.target_audience}
+                  onValueChange={(value) => setForm({ ...form, target_audience: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">الجميع</SelectItem>
+                    <SelectItem value="new_users">المستخدمون الجدد</SelectItem>
+                    <SelectItem value="active_users">المستخدمون النشطون</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button 
+                className="w-full" 
+                onClick={() => sendMutation.mutate(form)}
+                disabled={sendMutation.isPending || !form.title || !form.message}
+              >
+                <Send className="w-4 h-4 ml-2" />
+                {sendMutation.isPending ? 'جاري الإرسال...' : 'إرسال الإشعار'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   );
 };
