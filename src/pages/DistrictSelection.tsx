@@ -208,7 +208,7 @@ const DistrictSelection = () => {
                         </div>
                         <h3 className="text-lg font-bold">{district.name}</h3>
                         {district.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-2">
+                          <p className="text-sm text-muted-foreground">
                             {district.description}
                           </p>
                         )}
