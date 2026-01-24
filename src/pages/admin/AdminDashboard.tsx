@@ -19,6 +19,9 @@ import {
   Ruler,
   Map,
   Home,
+  BarChart3,
+  Sparkles,
+  FileText,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -40,8 +43,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { AdminAnalytics } from '@/components/admin/AdminAnalytics';
+import { AdminOffers } from '@/components/admin/AdminOffers';
+import { AdminNotifications } from '@/components/admin/AdminNotifications';
+import { AdminReports } from '@/components/admin/AdminReports';
 
-type ActiveTab = 'dashboard' | 'districts' | 'villages' | 'restaurants' | 'products' | 'orders';
+type ActiveTab = 'dashboard' | 'analytics' | 'offers' | 'notifications' | 'reports' | 'districts' | 'villages' | 'restaurants' | 'products' | 'orders';
 
 interface SizePrice {
   name: string;
@@ -615,6 +622,10 @@ const AdminDashboard = () => {
 
   const tabs = [
     { id: 'dashboard', label: 'لوحة التحكم', icon: LayoutDashboard },
+    { id: 'analytics', label: 'الإحصائيات', icon: BarChart3 },
+    { id: 'offers', label: 'العروض', icon: Sparkles },
+    { id: 'notifications', label: 'الإشعارات', icon: Bell },
+    { id: 'reports', label: 'التقارير', icon: FileText },
     { id: 'districts', label: 'المراكز', icon: Map },
     { id: 'villages', label: 'القرى', icon: Home },
     { id: 'restaurants', label: 'المطاعم', icon: Store },
@@ -738,6 +749,18 @@ const AdminDashboard = () => {
             </div>
           </>
         )}
+
+        {/* Analytics Tab */}
+        {activeTab === 'analytics' && <AdminAnalytics />}
+
+        {/* Offers Tab */}
+        {activeTab === 'offers' && <AdminOffers />}
+
+        {/* Notifications Tab */}
+        {activeTab === 'notifications' && <AdminNotifications />}
+
+        {/* Reports Tab */}
+        {activeTab === 'reports' && <AdminReports />}
 
         {/* Districts Tab */}
         {activeTab === 'districts' && (
