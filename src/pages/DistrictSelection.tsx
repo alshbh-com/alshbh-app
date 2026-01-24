@@ -65,11 +65,12 @@ const DistrictSelection = () => {
   const [selectedDistrict, setSelectedDistrict] = useState<District | null>(null);
   const [selectedVillage, setSelectedVillage] = useState<Village | null>(null);
 
-  // Check if location is already saved
+  // Redirect to home if location already saved (only on initial visit to root)
   useEffect(() => {
     const savedLocation = localStorage.getItem('alshbh_selected_location');
-    if (savedLocation) {
-      navigate('/home');
+    const isInitialVisit = window.location.pathname === '/';
+    if (savedLocation && isInitialVisit) {
+      navigate('/home', { replace: true });
     }
   }, [navigate]);
 
