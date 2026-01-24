@@ -26,6 +26,7 @@ import FAQ from "./pages/FAQ";
 import Terms from "./pages/Terms";
 import EditProfile from "./pages/EditProfile";
 import MyStats from "./pages/MyStats";
+import About from "./pages/About";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -64,6 +65,7 @@ const App = () => (
           <Route path="/terms" element={<Terms />} />
           <Route path="/edit-profile" element={<EditProfile />} />
           <Route path="/my-stats" element={<MyStats />} />
+          <Route path="/about" element={<About />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

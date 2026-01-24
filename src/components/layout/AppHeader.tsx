@@ -3,6 +3,7 @@ import { ShoppingBag, Menu, Search } from 'lucide-react';
 import { useCartStore } from '@/stores/cartStore';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
+import { Logo } from '@/components/Logo';
 
 interface AppHeaderProps {
   onMenuClick?: () => void;
@@ -26,16 +27,8 @@ export const AppHeader = ({ onMenuClick, showSearch = true }: AppHeaderProps) =>
         </Button>
 
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2">
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: 'spring', stiffness: 300 }}
-            className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center"
-          >
-            <span className="text-xl font-bold text-primary-foreground">ش</span>
-          </motion.div>
-          <span className="text-xl font-bold text-gradient hidden sm:block">الشبح فود</span>
+        <Link to="/home" className="flex items-center">
+          <Logo size="md" showText={true} />
         </Link>
 
         {/* Search - Desktop */}

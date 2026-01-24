@@ -14,8 +14,10 @@ import {
   ClipboardList,
   Lock,
   HelpCircle,
+  Info,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Logo } from '@/components/Logo';
 
 interface SideDrawerProps {
   open: boolean;
@@ -23,7 +25,7 @@ interface SideDrawerProps {
 }
 
 const menuItems = [
-  { title: 'الرئيسية', href: '/', icon: Home },
+  { title: 'الرئيسية', href: '/home', icon: Home },
   { title: 'المطاعم', href: '/restaurants', icon: Store },
   { title: 'المفضلة', href: '/favorites', icon: Heart },
   { title: 'سلة التسوق', href: '/cart', icon: ShoppingBag },
@@ -34,6 +36,7 @@ const menuItems = [
 
 const settingsItems = [
   { title: 'الإعدادات', href: '/settings', icon: Settings },
+  { title: 'من نحن', href: '/about', icon: Info },
   { title: 'الأسئلة الشائعة', href: '/faq', icon: HelpCircle },
   { title: 'سياسة الخصوصية', href: '/privacy', icon: Shield },
   { title: 'لوحة التحكم', href: '/admin', icon: Lock },
@@ -49,9 +52,7 @@ export const SideDrawer = ({ open, onOpenChange }: SideDrawerProps) => {
       <SheetContent side="right" className="w-80 p-0">
         <SheetHeader className="p-6 bg-gradient-to-bl from-primary to-accent text-primary-foreground">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
-              <span className="text-2xl font-bold">ش</span>
-            </div>
+            <Logo size="md" showText={false} />
             <div>
               <SheetTitle className="text-xl font-bold text-primary-foreground">
                 الشبح فود
