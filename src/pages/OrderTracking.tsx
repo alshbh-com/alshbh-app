@@ -32,6 +32,7 @@ interface Order {
   customer_location: string | null;
   total_amount: number;
   delivery_fee: number;
+  platform_fee: number | null;
   created_at: string;
   district_name: string | null;
   village_name: string | null;
@@ -401,7 +402,13 @@ const OrderTracking = () => {
                     <span className="text-muted-foreground">رسوم التوصيل</span>
                     <span>{order.delivery_fee} ج.م</span>
                   </div>
-                  <div className="flex justify-between font-bold text-lg">
+                  {order.platform_fee && order.platform_fee > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">رسوم المنصة</span>
+                      <span className="text-orange-500">{order.platform_fee} ج.م</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-bold text-lg pt-2 border-t">
                     <span>الإجمالي</span>
                     <span className="text-primary">{order.total_amount} ج.م</span>
                   </div>

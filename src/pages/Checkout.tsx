@@ -90,12 +90,42 @@ const Checkout = () => {
       // Save user info
       setUserInfo(formData.name, formData.phone, formData.address);
 
-      // Get order number
-      const { data: ordersCount } = await supabase
-        .from('orders')
-        .select('id', { count: 'exact', head: true });
+      // Save order to database FIRST to get the auto-generated order_number
+      const orderData = {
+        customer_name: formData.name,
+        customer_phone: formData.phone,
+        customer_city: savedLocation.district.name,
+        district_id: savedLocation.district.id,
+        district_name: savedLocation.district.name,
+        village_id: savedLocation.village.id,
+        village_name: savedLocation.village.name,
+        customer_location: formData.address,
+        items: items.map((item) => ({
+          name: item.name,
+          size: item.size,
+          quantity: item.quantity,
+          price: item.price,
+        })),
+        total_amount: total,
+        delivery_fee: deliveryFee,
+        platform_fee: platformFee,
+        status: 'pending',
+      };
 
-      const orderNumber = (ordersCount?.length || 0) + 1;
+      const { data: savedOrder, error } = await supabase
+        .from('orders')
+        .insert(orderData)
+        .select('order_number')
+        .single();
+      
+      if (error) {
+        console.error('Error saving order:', error);
+        toast.error('حدث خطأ أثناء حفظ الطلب');
+        setLoading(false);
+        return;
+      }
+
+      const orderNumber = savedOrder?.order_number || 0;
 
       // Create order message for WhatsApp
       let message = `🍽️ *طلب جديد من الشبح فود - #${orderNumber}*\n\n`;
@@ -125,33 +155,7 @@ const Checkout = () => {
       message += `📦 *رسوم المنصة (${getItemCount()} قطعة × 10):* ${platformFee} ج.م\n`;
       message += `💵 *الإجمالي:* ${total} ج.م`;
 
-      // Save order to database
-      const orderData = {
-        customer_name: formData.name,
-        customer_phone: formData.phone,
-        customer_city: savedLocation.district.name,
-        district_id: savedLocation.district.id,
-        district_name: savedLocation.district.name,
-        village_id: savedLocation.village.id,
-        village_name: savedLocation.village.name,
-        customer_location: formData.address,
-        items: items.map((item) => ({
-          name: item.name,
-          size: item.size,
-          quantity: item.quantity,
-          price: item.price,
-        })),
-        total_amount: total,
-        delivery_fee: deliveryFee,
-        platform_fee: platformFee,
-        status: 'pending',
-      };
-
-      const { error } = await supabase.from('orders').insert(orderData);
-      
-      if (error) {
-        console.error('Error saving order:', error);
-      }
+      // Order already saved above, proceed with WhatsApp
 
       // Open WhatsApp - use district whatsapp number or fallback to default
       const whatsappNumber = savedLocation.district.whatsappNumber || '201278006248';
