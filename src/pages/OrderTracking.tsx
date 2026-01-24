@@ -64,15 +64,25 @@ const OrderTracking = () => {
         .from('orders')
         .select('*')
         .eq('order_number', parseInt(num))
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      setOrder(data);
+      
+      if (!data) {
+        toast({
+          title: 'لم يتم العثور على الطلب',
+          description: `لا يوجد طلب برقم ${num}`,
+          variant: 'destructive',
+        });
+        setOrder(null);
+      } else {
+        setOrder(data);
+      }
     } catch (error) {
       console.error('Error fetching order:', error);
       toast({
         title: 'خطأ',
-        description: 'لم يتم العثور على الطلب',
+        description: 'حدث خطأ في البحث عن الطلب',
         variant: 'destructive',
       });
       setOrder(null);
