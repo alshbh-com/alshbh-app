@@ -56,26 +56,45 @@ const OrderTracking = () => {
   const [searchOrderNumber, setSearchOrderNumber] = useState(orderNumber || '');
 
   const fetchOrder = async (num: string) => {
-    if (!num) return;
+    if (!num || num.trim() === '') return;
     
     setLoading(true);
+    const searchNum = num.trim();
+    
     try {
-      const { data, error } = await supabase
+      // Try searching by order_number as integer first
+      let { data, error } = await supabase
         .from('orders')
         .select('*')
-        .eq('order_number', parseInt(num))
+        .eq('order_number', parseInt(searchNum))
         .maybeSingle();
 
-      if (error) throw error;
+      // If not found and parseInt failed, try as text comparison
+      if (!data && isNaN(parseInt(searchNum))) {
+        const result = await supabase
+          .from('orders')
+          .select('*')
+          .ilike('order_number', searchNum)
+          .maybeSingle();
+        data = result.data;
+        error = result.error;
+      }
+
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
+      }
       
       if (!data) {
+        console.log('No order found for number:', searchNum);
         toast({
           title: 'لم يتم العثور على الطلب',
-          description: `لا يوجد طلب برقم ${num}`,
+          description: `لا يوجد طلب برقم ${searchNum}`,
           variant: 'destructive',
         });
         setOrder(null);
       } else {
+        console.log('Order found:', data);
         setOrder(data);
       }
     } catch (error) {
