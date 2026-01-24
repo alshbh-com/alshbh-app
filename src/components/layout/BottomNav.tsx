@@ -1,14 +1,14 @@
 import { motion } from 'framer-motion';
-import { Home, Utensils, ShoppingBag, User, Heart } from 'lucide-react';
+import { Home, Utensils, ShoppingBag, User, MapPin } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useCartStore } from '@/stores/cartStore';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { icon: Home, label: 'الرئيسية', path: '/' },
+  { icon: Home, label: 'الرئيسية', path: '/home' },
   { icon: Utensils, label: 'المطاعم', path: '/restaurants' },
   { icon: ShoppingBag, label: 'السلة', path: '/cart', showBadge: true },
-  { icon: Heart, label: 'المفضلة', path: '/favorites' },
+  { icon: MapPin, label: 'تتبع', path: '/track-order' },
   { icon: User, label: 'حسابي', path: '/profile' },
 ];
 

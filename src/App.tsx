@@ -27,6 +27,7 @@ import Terms from "./pages/Terms";
 import EditProfile from "./pages/EditProfile";
 import MyStats from "./pages/MyStats";
 import About from "./pages/About";
+import OrderTracking from "./pages/OrderTracking";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -66,6 +67,8 @@ const App = () => (
           <Route path="/edit-profile" element={<EditProfile />} />
           <Route path="/my-stats" element={<MyStats />} />
           <Route path="/about" element={<About />} />
+          <Route path="/track-order" element={<OrderTracking />} />
+          <Route path="/track-order/:orderNumber" element={<OrderTracking />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

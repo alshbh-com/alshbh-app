@@ -15,6 +15,7 @@ import {
   Lock,
   HelpCircle,
   Info,
+  Navigation,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/Logo';
@@ -30,6 +31,7 @@ const menuItems = [
   { title: 'المفضلة', href: '/favorites', icon: Heart },
   { title: 'سلة التسوق', href: '/cart', icon: ShoppingBag },
   { title: 'طلباتي', href: '/orders', icon: ClipboardList },
+  { title: 'تتبع الطلب', href: '/track-order', icon: Navigation },
   { title: 'عناويني', href: '/addresses', icon: MapPin },
   { title: 'الملف الشخصي', href: '/profile', icon: User },
 ];
