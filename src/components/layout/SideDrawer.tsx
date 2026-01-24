@@ -54,9 +54,9 @@ export const SideDrawer = ({ open, onOpenChange }: SideDrawerProps) => {
             </div>
             <div>
               <SheetTitle className="text-xl font-bold text-primary-foreground">
-                الشبح
+                الشبح فود
               </SheetTitle>
-              <p className="text-sm opacity-90">منصة طلب الأكل</p>
+              <p className="text-sm opacity-90">منصة طلب الطعام</p>
             </div>
           </div>
         </SheetHeader>

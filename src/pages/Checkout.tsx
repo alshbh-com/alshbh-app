@@ -98,7 +98,7 @@ const Checkout = () => {
       const orderNumber = (ordersCount?.length || 0) + 1;
 
       // Create order message for WhatsApp
-      let message = `🍽️ *طلب جديد من الشبح - #${orderNumber}*\n\n`;
+      let message = `🍽️ *طلب جديد من الشبح فود - #${orderNumber}*\n\n`;
       message += `👤 *الاسم:* ${formData.name}\n`;
       message += `📱 *الهاتف:* ${formData.phone}\n`;
       message += `📍 *المركز:* ${savedLocation.district.name}\n`;

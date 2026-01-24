@@ -136,7 +136,7 @@ const DistrictSelection = () => {
                 <span className="text-xl">👻</span>
               </div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                الشبح
+                الشبح فود
               </h1>
             </div>
             {selectedDistrict && <div className="w-10" />}

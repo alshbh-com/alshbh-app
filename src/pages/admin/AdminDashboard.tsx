@@ -633,7 +633,7 @@ const AdminDashboard = () => {
             </div>
             <div>
               <h1 className="font-bold">لوحة التحكم</h1>
-              <p className="text-xs text-muted-foreground">الشبح - طلب طعام</p>
+              <p className="text-xs text-muted-foreground">الشبح فود - طلب طعام</p>
             </div>
           </div>
           <div className="flex items-center gap-2">

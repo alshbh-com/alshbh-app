@@ -11,13 +11,13 @@ interface ShareAppProps {
 export const ShareApp = ({ variant = 'button', className = '' }: ShareAppProps) => {
   const [copied, setCopied] = useState(false);
   const appUrl = 'https://alshbh.store';
-  const shareText = 'جرب تطبيق الشبح لطلب الطعام! 🍔🍕 اطلب من أفضل المطاعم بأسهل طريقة.';
+  const shareText = 'جرب تطبيق الشبح فود لطلب الطعام! 🍔🍕 اطلب من أفضل المطاعم بأسهل طريقة.';
 
   const handleShare = async () => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'تطبيق الشبح',
+          title: 'تطبيق الشبح فود',
           text: shareText,
           url: appUrl,
         });
