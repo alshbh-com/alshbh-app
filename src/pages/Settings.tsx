@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, Bell, Moon, Trash2, Info, Shield, Volume2, BellRing, Type, FileText, HelpCircle, Star, Share2, Palette, UserX } from 'lucide-react';
+import { ArrowRight, Bell, Moon, Trash2, Info, Shield, Volume2, BellRing, Type, FileText, HelpCircle, Star, Share2, Palette, UserX, Smartphone } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { ShareApp } from '@/components/ShareApp';
 import { RateApp } from '@/components/RateApp';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import {
   Select,
   SelectContent,
@@ -25,6 +26,7 @@ import {
 
 const Settings = () => {
   const navigate = useNavigate();
+  const { isSupported, isSubscribed, requestPermission, unsubscribe } = usePushNotifications();
   
   // Load settings from localStorage
   const [orderNotifications, setOrderNotifications] = useState(() => 
@@ -115,6 +117,25 @@ const Settings = () => {
     {
       title: 'الإشعارات',
       items: [
+        {
+          icon: Smartphone,
+          label: 'إشعارات Push',
+          description: isSubscribed ? 'الإشعارات مفعّلة' : 'تفعيل الإشعارات الفورية',
+          action: isSupported ? (
+            <Switch
+              checked={isSubscribed}
+              onCheckedChange={async (checked) => {
+                if (checked) {
+                  await requestPermission();
+                } else {
+                  await unsubscribe();
+                }
+              }}
+            />
+          ) : (
+            <span className="text-xs text-muted-foreground">غير مدعوم</span>
+          ),
+        },
         {
           icon: Bell,
           label: 'إشعارات الطلبات',
