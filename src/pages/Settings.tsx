@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, Bell, Moon, Trash2, Info, Shield, Volume2, BellRing, Type, FileText, HelpCircle, Star, Share2 } from 'lucide-react';
+import { ArrowRight, Bell, Moon, Trash2, Info, Shield, Volume2, BellRing, Type, FileText, HelpCircle, Star, Share2, Palette, UserX } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -14,6 +14,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -37,6 +45,10 @@ const Settings = () => {
   const [fontSize, setFontSize] = useState(() => 
     localStorage.getItem('settings_font_size') || 'medium'
   );
+  const [theme, setTheme] = useState(() => 
+    localStorage.getItem('settings_theme') || 'orange'
+  );
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   // Save settings to localStorage
   useEffect(() => {
@@ -67,12 +79,36 @@ const Settings = () => {
       fontSize === 'large' ? '18px' : '16px';
   }, [fontSize]);
 
+  useEffect(() => {
+    localStorage.setItem('settings_theme', theme);
+    // Apply theme color by updating CSS variables
+    const root = document.documentElement;
+    const themes: Record<string, { primary: string; accent: string }> = {
+      orange: { primary: '25 95% 53%', accent: '15 90% 45%' },
+      blue: { primary: '217 91% 60%', accent: '221 83% 53%' },
+      green: { primary: '142 76% 36%', accent: '152 69% 31%' },
+      purple: { primary: '263 70% 50%', accent: '271 81% 56%' },
+    };
+    const selectedTheme = themes[theme] || themes.orange;
+    root.style.setProperty('--primary', selectedTheme.primary);
+    root.style.setProperty('--accent', selectedTheme.accent);
+    root.style.setProperty('--ring', selectedTheme.primary);
+  }, [theme]);
+
   const handleClearData = () => {
     if (confirm('هل أنت متأكد من حذف جميع البيانات المحفوظة؟')) {
       localStorage.clear();
       toast.success('تم حذف جميع البيانات');
       window.location.reload();
     }
+  };
+
+  const handleDeleteAccount = () => {
+    // Clear all data and reset
+    localStorage.clear();
+    toast.success('تم حذف حسابك بنجاح');
+    setShowDeleteDialog(false);
+    window.location.href = '/';
   };
 
   const settingsGroups = [
@@ -156,6 +192,24 @@ const Settings = () => {
             </Select>
           ),
         },
+        {
+          icon: Palette,
+          label: 'ثيم الألوان',
+          description: 'اختر اللون المفضل للتطبيق',
+          action: (
+            <Select value={theme} onValueChange={setTheme}>
+              <SelectTrigger className="w-24 h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="orange">برتقالي</SelectItem>
+                <SelectItem value="blue">أزرق</SelectItem>
+                <SelectItem value="green">أخضر</SelectItem>
+                <SelectItem value="purple">بنفسجي</SelectItem>
+              </SelectContent>
+            </Select>
+          ),
+        },
       ],
     },
     {
@@ -218,6 +272,21 @@ const Settings = () => {
               variant="ghost"
               size="sm"
               onClick={handleClearData}
+              className="text-destructive hover:text-destructive"
+            >
+              حذف
+            </Button>
+          ),
+        },
+        {
+          icon: UserX,
+          label: 'حذف الحساب',
+          description: 'حذف حسابك وجميع بياناتك نهائياً',
+          action: (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowDeleteDialog(true)}
               className="text-destructive hover:text-destructive"
             >
               حذف
@@ -288,6 +357,26 @@ const Settings = () => {
           </motion.div>
         ))}
       </div>
+
+      {/* Delete Account Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive">حذف الحساب</DialogTitle>
+            <DialogDescription>
+              هل أنت متأكد من حذف حسابك؟ سيتم حذف جميع بياناتك نهائياً ولا يمكن التراجع عن هذا الإجراء.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+              إلغاء
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteAccount}>
+              حذف الحساب نهائياً
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

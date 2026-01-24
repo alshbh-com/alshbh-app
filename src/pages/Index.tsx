@@ -2,6 +2,10 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { HeroBanner } from '@/components/home/HeroBanner';
 import { OffersCarousel } from '@/components/home/OffersCarousel';
 import { CategoryCard } from '@/components/home/CategoryCard';
+import { QuickCategories } from '@/components/home/QuickCategories';
+import { FeaturedRestaurants } from '@/components/home/FeaturedRestaurants';
+import { PopularProducts } from '@/components/home/PopularProducts';
+import { ExclusiveOffers } from '@/components/home/ExclusiveOffers';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -67,6 +71,18 @@ const Index = () => {
     <AppLayout showSearch={false}>
       {/* Hero Banner */}
       <HeroBanner />
+
+      {/* Quick Categories */}
+      <QuickCategories />
+
+      {/* Featured Restaurants */}
+      <FeaturedRestaurants />
+
+      {/* Exclusive Offers */}
+      <ExclusiveOffers />
+
+      {/* Popular Products */}
+      <PopularProducts />
 
       {/* Offers Carousel */}
       {!loadingOffers && offers && offers.length > 0 && (
