@@ -1259,6 +1259,14 @@ const AdminDashboard = () => {
                 />
               </div>
             </div>
+            <Input
+              placeholder="كلمة مرور المطعم (للتحكم الذاتي)"
+              value={restaurantForm.password}
+              onChange={(e) => setRestaurantForm({ ...restaurantForm, password: e.target.value })}
+            />
+            <p className="text-xs text-muted-foreground -mt-2">
+              يستخدمها صاحب المطعم للدخول على /restaurant-panel
+            </p>
             <div className="flex items-center justify-between">
               <span>المطعم نشط</span>
               <Switch

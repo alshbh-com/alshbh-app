@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, Bell, Moon, Trash2, Info, Shield, Volume2, BellRing, Type, FileText, HelpCircle, Star, Share2, Palette, UserX, Smartphone } from 'lucide-react';
+import { ArrowRight, Bell, Moon, Trash2, Info, Shield, Volume2, BellRing, Type, FileText, HelpCircle, Star, Share2, Palette, UserX, Smartphone, Store } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -230,6 +230,17 @@ const Settings = () => {
               </SelectContent>
             </Select>
           ),
+        },
+      ],
+    },
+    {
+      title: 'المطاعم',
+      items: [
+        {
+          icon: Store,
+          label: 'لوحة تحكم المطعم',
+          description: 'للمطاعم المسجلة - تحكم في منتجاتك وحالة المطعم',
+          onClick: () => navigate('/restaurant-panel'),
         },
       ],
     },
