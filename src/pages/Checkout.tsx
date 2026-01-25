@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, MapPin, Phone, User, FileText, Send, Navigation } from 'lucide-react';
+import { ArrowRight, MapPin, Phone, User, FileText, Send, Navigation, MapPinned, Loader2 } from 'lucide-react';
 import { useCartStore } from '@/stores/cartStore';
 import { useUserStore } from '@/stores/userStore';
+import { useGeolocation } from '@/hooks/useGeolocation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -29,6 +30,7 @@ const Checkout = () => {
   const navigate = useNavigate();
   const { items, getTotal, clearCart, getItemCount } = useCartStore();
   const { name, phone, address, setUserInfo } = useUserStore();
+  const { latitude, longitude, loading: geoLoading, requestLocation } = useGeolocation();
   const [savedLocation, setSavedLocation] = useState<SavedLocation | null>(null);
   
   const [formData, setFormData] = useState({
@@ -38,6 +40,8 @@ const Checkout = () => {
     notes: '',
   });
   const [loading, setLoading] = useState(false);
+  const [customerLat, setCustomerLat] = useState<number | null>(null);
+  const [customerLng, setCustomerLng] = useState<number | null>(null);
 
   // Load saved location from localStorage
   useEffect(() => {
@@ -49,6 +53,16 @@ const Checkout = () => {
         console.error('Error parsing saved location:', e);
       }
     }
+  }, []);
+
+  // Auto-request location on mount
+  useEffect(() => {
+    requestLocation().then((loc) => {
+      if (loc) {
+        setCustomerLat(loc.latitude);
+        setCustomerLng(loc.longitude);
+      }
+    });
   }, []);
 
   const deliveryFee = savedLocation?.village?.deliveryFee || 0;
@@ -100,6 +114,8 @@ const Checkout = () => {
         village_id: savedLocation.village.id,
         village_name: savedLocation.village.name,
         customer_location: formData.address,
+        customer_latitude: customerLat,
+        customer_longitude: customerLng,
         items: items.map((item) => ({
           name: item.name,
           size: item.size,
@@ -136,6 +152,12 @@ const Checkout = () => {
       if (formData.address) {
         message += `🏠 *العنوان:* ${formData.address}\n`;
       }
+      
+      // Add location link if available
+      if (customerLat && customerLng) {
+        message += `📌 *الموقع:* https://www.google.com/maps?q=${customerLat},${customerLng}\n`;
+      }
+      
       if (formData.notes) {
         message += `📝 *ملاحظات:* ${formData.notes}\n`;
       }
@@ -268,7 +290,7 @@ const Checkout = () => {
               </div>
               <div className="flex justify-between text-sm">
                 <span>رسوم المنصة ({getItemCount()} قطعة × 10)</span>
-                <span className="text-orange-500 font-medium">{platformFee} ج.م</span>
+                <span className="text-accent font-medium">{platformFee} ج.م</span>
               </div>
               <div className="flex justify-between font-bold text-lg mt-2 pt-2 border-t">
                 <span>الإجمالي</span>

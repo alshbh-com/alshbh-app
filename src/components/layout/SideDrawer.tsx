@@ -38,6 +38,7 @@ const menuItems = [
 
 const settingsItems = [
   { title: 'الإعدادات', href: '/settings', icon: Settings },
+  { title: 'لوحة المطعم', href: '/restaurant-panel', icon: Store },
   { title: 'من نحن', href: '/about', icon: Info },
   { title: 'الأسئلة الشائعة', href: '/faq', icon: HelpCircle },
   { title: 'سياسة الخصوصية', href: '/privacy', icon: Shield },

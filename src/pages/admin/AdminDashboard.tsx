@@ -79,6 +79,7 @@ interface RestaurantForm {
   is_active: boolean;
   is_open: boolean;
   district_id: string;
+  password: string;
 }
 
 interface DistrictForm {
@@ -146,6 +147,7 @@ const AdminDashboard = () => {
     is_active: true,
     is_open: true,
     district_id: '',
+    password: '',
   });
   
   const [productForm, setProductForm] = useState<ProductForm>({
@@ -390,6 +392,7 @@ const AdminDashboard = () => {
             is_active: data.is_active,
             is_open: data.is_open,
             district_id: data.district_id || null,
+            password: data.password || null,
           })
           .eq('id', data.id);
         if (error) throw error;
@@ -405,6 +408,7 @@ const AdminDashboard = () => {
           is_active: data.is_active,
           is_open: data.is_open,
           district_id: data.district_id || null,
+          password: data.password || null,
         });
         if (error) throw error;
       }
@@ -553,6 +557,7 @@ const AdminDashboard = () => {
         is_active: restaurant.is_active ?? true,
         is_open: restaurant.is_open ?? true,
         district_id: restaurant.district_id || '',
+        password: (restaurant as any).password || '',
       });
     } else {
       setRestaurantForm({
@@ -566,6 +571,7 @@ const AdminDashboard = () => {
         is_active: true,
         is_open: true,
         district_id: districts?.[0]?.id || '',
+        password: '',
       });
     }
     setShowRestaurantModal(true);
