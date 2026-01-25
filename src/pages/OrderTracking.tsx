@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -22,9 +22,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-
-// Lazy load the map component
-const CustomerLocationMap = lazy(() => import('@/components/maps/CustomerLocationMap'));
+import CustomerLocationMap from '@/components/maps/CustomerLocationMap';
 
 interface Order {
   id: string;
@@ -252,28 +250,12 @@ const OrderTracking = () => {
               </CardHeader>
               <CardContent className="p-4">
                 {order.customer_latitude && order.customer_longitude ? (
-                  <div className="space-y-3">
-                    <Suspense fallback={
-                      <div className="h-64 bg-muted rounded-xl flex items-center justify-center">
-                        <RefreshCw className="w-6 h-6 animate-spin text-primary" />
-                      </div>
-                    }>
-                      <CustomerLocationMap
-                        latitude={order.customer_latitude}
-                        longitude={order.customer_longitude}
-                        customerName={order.customer_name}
-                        customerLocation={order.customer_location || undefined}
-                      />
-                    </Suspense>
-                    <Button 
-                      variant="outline" 
-                      className="w-full"
-                      onClick={() => window.open(`https://www.google.com/maps?q=${order.customer_latitude},${order.customer_longitude}`, '_blank')}
-                    >
-                      <Navigation className="w-4 h-4 ml-2" />
-                      فتح في خرائط جوجل
-                    </Button>
-                  </div>
+                  <CustomerLocationMap
+                    latitude={order.customer_latitude}
+                    longitude={order.customer_longitude}
+                    customerName={order.customer_name}
+                    customerLocation={order.customer_location || undefined}
+                  />
                 ) : (
                   <div className="relative h-48 bg-gradient-to-br from-primary/5 to-accent/5 rounded-xl">
                     {/* Animated Map Background */}
