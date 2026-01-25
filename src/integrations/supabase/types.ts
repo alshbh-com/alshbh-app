@@ -928,7 +928,9 @@ export type Database = {
         Row: {
           created_at: string | null
           customer_city: string
+          customer_latitude: number | null
           customer_location: string | null
+          customer_longitude: number | null
           customer_name: string
           customer_phone: string
           delivery_fee: number
@@ -949,7 +951,9 @@ export type Database = {
         Insert: {
           created_at?: string | null
           customer_city: string
+          customer_latitude?: number | null
           customer_location?: string | null
+          customer_longitude?: number | null
           customer_name: string
           customer_phone: string
           delivery_fee: number
@@ -970,7 +974,9 @@ export type Database = {
         Update: {
           created_at?: string | null
           customer_city?: string
+          customer_latitude?: number | null
           customer_location?: string | null
+          customer_longitude?: number | null
           customer_name?: string
           customer_phone?: string
           delivery_fee?: number
@@ -1207,6 +1213,7 @@ export type Database = {
           minimum_order: number | null
           name: string
           open_time: string | null
+          password: string | null
           payment_methods: Json | null
           review_count: number | null
           sort_order: number | null
@@ -1232,6 +1239,7 @@ export type Database = {
           minimum_order?: number | null
           name: string
           open_time?: string | null
+          password?: string | null
           payment_methods?: Json | null
           review_count?: number | null
           sort_order?: number | null
@@ -1257,6 +1265,7 @@ export type Database = {
           minimum_order?: number | null
           name?: string
           open_time?: string | null
+          password?: string | null
           payment_methods?: Json | null
           review_count?: number | null
           sort_order?: number | null

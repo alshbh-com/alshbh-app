@@ -29,6 +29,7 @@ import EditProfile from "./pages/EditProfile";
 import MyStats from "./pages/MyStats";
 import About from "./pages/About";
 import OrderTracking from "./pages/OrderTracking";
+import RestaurantPanel from "./pages/RestaurantPanel";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -71,6 +72,7 @@ const App = () => (
           <Route path="/about" element={<About />} />
           <Route path="/track-order" element={<OrderTracking />} />
           <Route path="/track-order/:orderNumber" element={<OrderTracking />} />
+          <Route path="/restaurant-panel" element={<RestaurantPanel />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

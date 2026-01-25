@@ -1,17 +1,36 @@
 import { motion } from 'framer-motion';
-import { ShoppingBag, Menu, Search } from 'lucide-react';
+import { ShoppingBag, Menu, Search, MapPin } from 'lucide-react';
 import { useCartStore } from '@/stores/cartStore';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Logo } from '@/components/Logo';
+import { useEffect, useState } from 'react';
 
 interface AppHeaderProps {
   onMenuClick?: () => void;
   showSearch?: boolean;
 }
 
+interface SavedLocation {
+  district: { id: string; name: string };
+  village: { id: string; name: string };
+}
+
 export const AppHeader = ({ onMenuClick, showSearch = true }: AppHeaderProps) => {
   const itemCount = useCartStore((state) => state.getItemCount());
+  const navigate = useNavigate();
+  const [location, setLocation] = useState<SavedLocation | null>(null);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('alshbh_selected_location');
+    if (saved) {
+      try {
+        setLocation(JSON.parse(saved));
+      } catch (e) {
+        console.error('Error parsing location:', e);
+      }
+    }
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 glass border-b safe-top">
@@ -26,10 +45,25 @@ export const AppHeader = ({ onMenuClick, showSearch = true }: AppHeaderProps) =>
           <Menu className="w-5 h-5" />
         </Button>
 
-        {/* Logo */}
-        <Link to="/home" className="flex items-center">
-          <Logo size="md" showText={true} />
-        </Link>
+        {/* Logo + Location */}
+        <div className="flex items-center gap-3">
+          <Link to="/home" className="flex items-center">
+            <Logo size="md" showText={true} />
+          </Link>
+          
+          {/* Village Name Badge */}
+          {location?.village && (
+            <button
+              onClick={() => navigate('/')}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary/10 hover:bg-primary/20 transition-colors"
+            >
+              <MapPin className="w-3 h-3 text-primary" />
+              <span className="text-xs font-medium text-primary truncate max-w-[80px]">
+                {location.village.name}
+              </span>
+            </button>
+          )}
+        </div>
 
         {/* Search - Desktop */}
         {showSearch && (
