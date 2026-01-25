@@ -96,28 +96,41 @@ const RestaurantPanel = () => {
     setAuthLoading(true);
     
     try {
-      // Find restaurant by password
+      // Find restaurant by password - use maybeSingle to handle multiple/no results
       const { data, error } = await supabase
         .from('sub_categories')
         .select('id, name, password')
-        .eq('password', password)
-        .eq('is_active', true)
-        .single();
+        .eq('password', password.trim())
+        .eq('is_active', true);
 
-      if (error || !data) {
+      if (error) {
+        console.error('Database error:', error);
+        toast.error('حدث خطأ في البحث');
+        return;
+      }
+
+      // Check if no restaurant found
+      if (!data || data.length === 0) {
         toast.error('كلمة المرور غير صحيحة');
         return;
       }
 
-      setRestaurantId(data.id);
-      setRestaurantName(data.name);
+      // Check if multiple restaurants have the same password (shouldn't happen)
+      if (data.length > 1) {
+        toast.error('يوجد خطأ في النظام - كلمة المرور مكررة');
+        return;
+      }
+
+      const restaurant = data[0];
+      setRestaurantId(restaurant.id);
+      setRestaurantName(restaurant.name);
       setAuthenticated(true);
-      toast.success(`مرحباً بك في ${data.name}`);
+      toast.success(`مرحباً بك في ${restaurant.name}`);
       
       // Save session
       sessionStorage.setItem('restaurant_session', JSON.stringify({
-        id: data.id,
-        name: data.name,
+        id: restaurant.id,
+        name: restaurant.name,
         time: Date.now()
       }));
     } catch (error) {

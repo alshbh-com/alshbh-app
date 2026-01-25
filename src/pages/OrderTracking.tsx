@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -16,11 +16,15 @@ import {
   Home,
   ArrowRight,
   RefreshCw,
-  MessageCircle
+  MessageCircle,
+  Navigation
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+
+// Lazy load the map component
+const CustomerLocationMap = lazy(() => import('@/components/maps/CustomerLocationMap'));
 
 interface Order {
   id: string;
@@ -30,6 +34,8 @@ interface Order {
   customer_phone: string;
   customer_city: string;
   customer_location: string | null;
+  customer_latitude: number | null;
+  customer_longitude: number | null;
   total_amount: number;
   delivery_fee: number;
   platform_fee: number | null;
@@ -236,7 +242,7 @@ const OrderTracking = () => {
               )}
             </Card>
 
-            {/* Live Map Placeholder */}
+            {/* Interactive Map or Placeholder */}
             <Card className="overflow-hidden">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -244,64 +250,92 @@ const OrderTracking = () => {
                   موقع التوصيل
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-0">
-                <div className="relative h-48 bg-gradient-to-br from-primary/5 to-accent/5">
-                  {/* Animated Map Background */}
-                  <div className="absolute inset-0 overflow-hidden">
-                    <motion.div
-                      className="absolute w-full h-full"
-                      style={{
-                        background: `
-                          linear-gradient(90deg, transparent 49%, hsl(var(--muted)) 49%, hsl(var(--muted)) 51%, transparent 51%),
-                          linear-gradient(transparent 49%, hsl(var(--muted)) 49%, hsl(var(--muted)) 51%, transparent 51%)
-                        `,
-                        backgroundSize: '50px 50px',
-                      }}
-                    />
+              <CardContent className="p-4">
+                {order.customer_latitude && order.customer_longitude ? (
+                  <div className="space-y-3">
+                    <Suspense fallback={
+                      <div className="h-64 bg-muted rounded-xl flex items-center justify-center">
+                        <RefreshCw className="w-6 h-6 animate-spin text-primary" />
+                      </div>
+                    }>
+                      <CustomerLocationMap
+                        latitude={order.customer_latitude}
+                        longitude={order.customer_longitude}
+                        customerName={order.customer_name}
+                        customerLocation={order.customer_location || undefined}
+                      />
+                    </Suspense>
+                    <Button 
+                      variant="outline" 
+                      className="w-full"
+                      onClick={() => window.open(`https://www.google.com/maps?q=${order.customer_latitude},${order.customer_longitude}`, '_blank')}
+                    >
+                      <Navigation className="w-4 h-4 ml-2" />
+                      فتح في خرائط جوجل
+                    </Button>
                   </div>
-                  
-                  {/* Delivery Animation */}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="relative">
-                      {/* Destination Pin */}
+                ) : (
+                  <div className="relative h-48 bg-gradient-to-br from-primary/5 to-accent/5 rounded-xl">
+                    {/* Animated Map Background */}
+                    <div className="absolute inset-0 overflow-hidden rounded-xl">
                       <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="absolute -top-16 left-1/2 -translate-x-1/2"
-                      >
-                        <div className="relative">
-                          <MapPin className="w-10 h-10 text-destructive fill-destructive/20" />
-                          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-destructive/30 rounded-full animate-ping" />
-                        </div>
-                      </motion.div>
-                      
-                      {/* Delivery Truck */}
-                      {order.status === 'on_the_way' && (
+                        className="absolute w-full h-full"
+                        style={{
+                          background: `
+                            linear-gradient(90deg, transparent 49%, hsl(var(--muted)) 49%, hsl(var(--muted)) 51%, transparent 51%),
+                            linear-gradient(transparent 49%, hsl(var(--muted)) 49%, hsl(var(--muted)) 51%, transparent 51%)
+                          `,
+                          backgroundSize: '50px 50px',
+                        }}
+                      />
+                    </div>
+                    
+                    {/* Delivery Animation */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="relative">
+                        {/* Destination Pin */}
                         <motion.div
-                          animate={{ x: [0, 10, 0, -10, 0] }}
-                          transition={{ duration: 2, repeat: Infinity }}
-                          className="absolute -top-8 -left-20"
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          className="absolute -top-16 left-1/2 -translate-x-1/2"
                         >
-                          <div className="bg-primary text-primary-foreground p-2 rounded-full shadow-lg">
-                            <Truck className="w-6 h-6" />
+                          <div className="relative">
+                            <MapPin className="w-10 h-10 text-destructive fill-destructive/20" />
+                            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-destructive/30 rounded-full animate-ping" />
                           </div>
                         </motion.div>
-                      )}
-                      
-                      {/* Location Text */}
-                      <div className="bg-card/90 backdrop-blur px-4 py-2 rounded-xl shadow-lg border mt-4">
-                        <p className="text-sm font-medium text-center">
-                          {order.village_name || order.district_name || order.customer_city}
-                        </p>
-                        {order.customer_location && (
-                          <p className="text-xs text-muted-foreground text-center mt-1">
-                            {order.customer_location}
-                          </p>
+                        
+                        {/* Delivery Truck */}
+                        {order.status === 'on_the_way' && (
+                          <motion.div
+                            animate={{ x: [0, 10, 0, -10, 0] }}
+                            transition={{ duration: 2, repeat: Infinity }}
+                            className="absolute -top-8 -left-20"
+                          >
+                            <div className="bg-primary text-primary-foreground p-2 rounded-full shadow-lg">
+                              <Truck className="w-6 h-6" />
+                            </div>
+                          </motion.div>
                         )}
+                        
+                        {/* Location Text */}
+                        <div className="bg-card/90 backdrop-blur px-4 py-2 rounded-xl shadow-lg border mt-4">
+                          <p className="text-sm font-medium text-center">
+                            {order.village_name || order.district_name || order.customer_city}
+                          </p>
+                          {order.customer_location && (
+                            <p className="text-xs text-muted-foreground text-center mt-1">
+                              {order.customer_location}
+                            </p>
+                          )}
+                          <p className="text-xs text-muted-foreground text-center mt-2">
+                            لم يتم تحديد الموقع بالضبط
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                )}
               </CardContent>
             </Card>
 
@@ -405,7 +439,7 @@ const OrderTracking = () => {
                   {order.platform_fee && order.platform_fee > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">رسوم المنصة</span>
-                      <span className="text-orange-500">{order.platform_fee} ج.م</span>
+                      <span className="text-accent">{order.platform_fee} ج.م</span>
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-lg pt-2 border-t">

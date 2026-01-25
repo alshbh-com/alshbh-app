@@ -378,6 +378,21 @@ const AdminDashboard = () => {
   // Restaurant mutations
   const saveRestaurantMutation = useMutation({
     mutationFn: async (data: RestaurantForm) => {
+      // Check if password is unique (if provided)
+      if (data.password && data.password.trim()) {
+        const { data: existingRestaurants, error: checkError } = await supabase
+          .from('sub_categories')
+          .select('id, name')
+          .eq('password', data.password.trim())
+          .neq('id', data.id || '00000000-0000-0000-0000-000000000000');
+        
+        if (checkError) throw checkError;
+        
+        if (existingRestaurants && existingRestaurants.length > 0) {
+          throw new Error(`كلمة المرور مستخدمة بالفعل من مطعم "${existingRestaurants[0].name}"`);
+        }
+      }
+
       if (data.id) {
         const { error } = await supabase
           .from('sub_categories')
@@ -392,7 +407,7 @@ const AdminDashboard = () => {
             is_active: data.is_active,
             is_open: data.is_open,
             district_id: data.district_id || null,
-            password: data.password || null,
+            password: data.password?.trim() || null,
           })
           .eq('id', data.id);
         if (error) throw error;
@@ -408,7 +423,7 @@ const AdminDashboard = () => {
           is_active: data.is_active,
           is_open: data.is_open,
           district_id: data.district_id || null,
-          password: data.password || null,
+          password: data.password?.trim() || null,
         });
         if (error) throw error;
       }
@@ -419,7 +434,7 @@ const AdminDashboard = () => {
       setShowRestaurantModal(false);
       toast.success(restaurantForm.id ? 'تم تحديث المطعم' : 'تم إضافة المطعم');
     },
-    onError: () => toast.error('حدث خطأ'),
+    onError: (error: Error) => toast.error(error.message || 'حدث خطأ'),
   });
 
   const deleteRestaurantMutation = useMutation({
