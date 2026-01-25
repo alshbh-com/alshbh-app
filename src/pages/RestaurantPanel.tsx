@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowRight, Lock, Store, Package, Power, Plus, Edit2, Trash2, 
-  Save, X, Loader2, Image as ImageIcon 
+  Save, X, Loader2, Image as ImageIcon, TrendingUp, ShoppingCart, DollarSign
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +28,11 @@ interface ProductForm {
   image_url: string;
   sizes_and_prices: SizePrice[];
   is_active: boolean;
+}
+
+interface RestaurantStats {
+  totalOrders: number;
+  totalRevenue: number;
 }
 
 const defaultProduct: ProductForm = {
@@ -65,6 +70,40 @@ const RestaurantPanel = () => {
         .single();
       if (error) throw error;
       return data;
+    },
+    enabled: !!restaurantId && authenticated,
+  });
+
+  // Fetch restaurant statistics (orders and revenue)
+  const { data: stats } = useQuery({
+    queryKey: ['restaurant-stats', restaurantId],
+    queryFn: async (): Promise<RestaurantStats> => {
+      if (!restaurantId) return { totalOrders: 0, totalRevenue: 0 };
+      
+      // Get all orders and filter by items containing this restaurant
+      const { data: orders, error } = await supabase
+        .from('orders')
+        .select('items, total_amount');
+      
+      if (error) throw error;
+      
+      let totalOrders = 0;
+      let totalRevenue = 0;
+      
+      orders?.forEach(order => {
+        const items = order.items as Array<{ restaurantId?: string; price?: number; quantity?: number }>;
+        if (Array.isArray(items)) {
+          const restaurantItems = items.filter(item => item.restaurantId === restaurantId);
+          if (restaurantItems.length > 0) {
+            totalOrders += 1;
+            restaurantItems.forEach(item => {
+              totalRevenue += (item.price || 0) * (item.quantity || 1);
+            });
+          }
+        }
+      });
+      
+      return { totalOrders, totalRevenue };
     },
     enabled: !!restaurantId && authenticated,
   });
@@ -340,10 +379,38 @@ const RestaurantPanel = () => {
       </header>
 
       <div className="container p-4 max-w-2xl mx-auto">
+        {/* Statistics Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="grid grid-cols-2 gap-4 mb-6"
+        >
+          <div className="bg-gradient-to-br from-primary/20 to-primary/5 rounded-2xl p-4 shadow-soft">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                <ShoppingCart className="w-5 h-5 text-primary" />
+              </div>
+              <span className="text-sm text-muted-foreground">عدد الطلبات</span>
+            </div>
+            <p className="text-3xl font-bold text-primary">{stats?.totalOrders || 0}</p>
+          </div>
+          
+          <div className="bg-gradient-to-br from-green-500/20 to-green-500/5 rounded-2xl p-4 shadow-soft">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                <DollarSign className="w-5 h-5 text-green-500" />
+              </div>
+              <span className="text-sm text-muted-foreground">إجمالي الإيرادات</span>
+            </div>
+            <p className="text-3xl font-bold text-green-600">{stats?.totalRevenue || 0} <span className="text-sm">ج.م</span></p>
+          </div>
+        </motion.div>
+
         {/* Restaurant Status */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
           className="bg-card rounded-2xl p-4 mb-6 shadow-soft"
         >
           <div className="flex items-center justify-between">

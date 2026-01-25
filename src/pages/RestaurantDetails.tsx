@@ -56,29 +56,6 @@ const RestaurantDetails = () => {
     enabled: !!id,
   });
 
-  const handleAddToCart = () => {
-    if (!selectedProduct) return;
-    
-    const price = selectedSize?.price || selectedProduct.price;
-    const sizeName = selectedSize?.name || '';
-    
-    addItem({
-      productId: selectedProduct.id,
-      name: selectedProduct.name,
-      price,
-      image: selectedProduct.image_url || undefined,
-      quantity,
-      restaurantId: id!,
-      restaurantName: restaurant?.name || '',
-      size: sizeName,
-    });
-    
-    toast.success('تمت الإضافة إلى السلة');
-    setSelectedProduct(null);
-    setSelectedSize(null);
-    setQuantity(1);
-  };
-
   const parseSizes = (product: Product) => {
     if (!product.sizes_and_prices) return [];
     if (Array.isArray(product.sizes_and_prices)) return product.sizes_and_prices;
@@ -110,8 +87,51 @@ const RestaurantDetails = () => {
     );
   }
 
+  // Check if restaurant is closed
+  const isRestaurantClosed = !restaurant.is_open;
+
+  const handleAddToCart = () => {
+    if (!selectedProduct) return;
+    
+    // Prevent adding if restaurant is closed
+    if (isRestaurantClosed) {
+      toast.error('المطعم مغلق حالياً - لا يمكن إضافة منتجات');
+      return;
+    }
+    
+    const price = selectedSize?.price || selectedProduct.price;
+    const sizeName = selectedSize?.name || '';
+    
+    addItem({
+      productId: selectedProduct.id,
+      name: selectedProduct.name,
+      price,
+      image: selectedProduct.image_url || undefined,
+      quantity,
+      restaurantId: id!,
+      restaurantName: restaurant?.name || '',
+      size: sizeName,
+    });
+    
+    toast.success('تمت الإضافة إلى السلة');
+    setSelectedProduct(null);
+    setSelectedSize(null);
+    setQuantity(1);
+  };
+
   return (
     <div className="min-h-screen bg-background pb-32">
+      {/* Closed Restaurant Banner */}
+      {isRestaurantClosed && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="sticky top-0 z-50 bg-destructive text-destructive-foreground py-3 px-4 text-center font-bold"
+        >
+          🔴 المطعم مغلق حالياً - لا يمكن الطلب الآن
+        </motion.div>
+      )}
+
       {/* Header Image */}
       <div className="relative h-56">
         <img
