@@ -11,7 +11,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
-const PLATFORM_FEE_PER_ITEM = 10; // 10 EGP per item
+const PLATFORM_FEE_FIRST_ITEM = 10; // 10 EGP for first item
+const PLATFORM_FEE_ADDITIONAL = 5; // 5 EGP for each additional item
 
 interface SavedLocation {
   district: {
@@ -66,7 +67,8 @@ const Checkout = () => {
   }, []);
 
   const deliveryFee = savedLocation?.village?.deliveryFee || 0;
-  const platformFee = getItemCount() * PLATFORM_FEE_PER_ITEM;
+  const itemCount = getItemCount();
+  const platformFee = itemCount > 0 ? PLATFORM_FEE_FIRST_ITEM + (itemCount - 1) * PLATFORM_FEE_ADDITIONAL : 0;
   const subtotal = getTotal();
   const total = subtotal + deliveryFee + platformFee;
 
@@ -174,7 +176,7 @@ const Checkout = () => {
       message += `\n━━━━━━━━━━━━━━━\n`;
       message += `💰 *المجموع:* ${subtotal} ج.م\n`;
       message += `🚚 *التوصيل (${savedLocation.village.name}):* ${deliveryFee} ج.م\n`;
-      message += `📦 *رسوم المنصة (${getItemCount()} قطعة × 10):* ${platformFee} ج.م\n`;
+      message += `📦 *رسوم المنصة (${itemCount === 1 ? 'قطعة واحدة' : `${itemCount} قطع`}):* ${platformFee} ج.م\n`;
       message += `💵 *الإجمالي:* ${total} ج.م`;
 
       // Order already saved above, proceed with WhatsApp
@@ -289,7 +291,7 @@ const Checkout = () => {
                 <span className="text-primary font-medium">{deliveryFee} ج.م</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span>رسوم المنصة ({getItemCount()} قطعة × 10)</span>
+                <span>رسوم المنصة ({itemCount === 1 ? 'قطعة واحدة' : `${itemCount} قطع`})</span>
                 <span className="text-accent font-medium">{platformFee} ج.م</span>
               </div>
               <div className="flex justify-between font-bold text-lg mt-2 pt-2 border-t">

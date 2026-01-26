@@ -18,7 +18,8 @@ interface SavedLocation {
   };
 }
 
-const PLATFORM_FEE_PER_ITEM = 10; // رسوم المنصة لكل قطعة
+const PLATFORM_FEE_FIRST_ITEM = 10; // رسوم المنصة للقطعة الأولى
+const PLATFORM_FEE_ADDITIONAL = 5; // رسوم المنصة لكل قطعة إضافية
 
 const Cart = () => {
   const navigate = useNavigate();
@@ -40,7 +41,7 @@ const Cart = () => {
 
   const deliveryFee = location?.village?.deliveryFee || 0;
   const itemCount = getItemCount();
-  const platformFee = itemCount * PLATFORM_FEE_PER_ITEM;
+  const platformFee = itemCount > 0 ? PLATFORM_FEE_FIRST_ITEM + (itemCount - 1) * PLATFORM_FEE_ADDITIONAL : 0;
   const grandTotal = subtotal + deliveryFee + platformFee;
 
   const handleChangeLocation = () => {
@@ -212,7 +213,7 @@ const Cart = () => {
               </div>
               
               <div className="flex justify-between items-center mb-4">
-                <span className="text-muted-foreground">رسوم المنصة ({itemCount} قطعة × 10)</span>
+                <span className="text-muted-foreground">رسوم المنصة ({itemCount === 1 ? 'قطعة واحدة' : `${itemCount} قطع`})</span>
                 <span className="font-medium text-accent-foreground">{platformFee} ج.م</span>
               </div>
               
