@@ -47,8 +47,10 @@ import { AdminAnalytics } from '@/components/admin/AdminAnalytics';
 import { AdminOffers } from '@/components/admin/AdminOffers';
 import { AdminNotifications } from '@/components/admin/AdminNotifications';
 import { AdminReports } from '@/components/admin/AdminReports';
+import { AdminAnnouncements } from '@/components/admin/AdminAnnouncements';
+import { AdminOrders } from '@/components/admin/AdminOrders';
 
-type ActiveTab = 'dashboard' | 'analytics' | 'offers' | 'notifications' | 'reports' | 'districts' | 'villages' | 'restaurants' | 'products' | 'orders';
+type ActiveTab = 'dashboard' | 'analytics' | 'offers' | 'notifications' | 'reports' | 'announcements' | 'districts' | 'villages' | 'restaurants' | 'products' | 'orders';
 
 interface SizePrice {
   name: string;
@@ -645,6 +647,7 @@ const AdminDashboard = () => {
     { id: 'dashboard', label: 'لوحة التحكم', icon: LayoutDashboard },
     { id: 'analytics', label: 'الإحصائيات', icon: BarChart3 },
     { id: 'offers', label: 'العروض', icon: Sparkles },
+    { id: 'announcements', label: 'الإعلانات', icon: Bell },
     { id: 'notifications', label: 'الإشعارات', icon: Bell },
     { id: 'reports', label: 'التقارير', icon: FileText },
     { id: 'districts', label: 'المراكز', icon: Map },
@@ -782,6 +785,9 @@ const AdminDashboard = () => {
 
         {/* Reports Tab */}
         {activeTab === 'reports' && <AdminReports />}
+
+        {/* Announcements Tab */}
+        {activeTab === 'announcements' && <AdminAnnouncements />}
 
         {/* Districts Tab */}
         {activeTab === 'districts' && (
@@ -1044,75 +1050,7 @@ const AdminDashboard = () => {
         )}
 
         {/* Orders Tab */}
-        {activeTab === 'orders' && (
-          <div className="bg-card rounded-2xl p-4 shadow-soft">
-            <h2 className="font-bold mb-4">جميع الطلبات</h2>
-            {loadingOrders ? (
-              <div className="space-y-3">
-                {[...Array(5)].map((_, i) => (
-                  <Skeleton key={i} className="h-32 rounded-xl" />
-                ))}
-              </div>
-            ) : allOrders && allOrders.length > 0 ? (
-              <div className="space-y-3">
-                {allOrders.slice().reverse().map((order) => {
-                  const items = order.items as { name: string; quantity: number; size?: string }[];
-                  return (
-                    <div key={order.id} className="p-4 bg-muted rounded-xl">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="font-bold">
-                          <span className="text-primary text-lg">#{order.orderNumber}</span>
-                          <span className="mx-2">-</span>
-                          {order.customer_name}
-                        </p>
-                        <Select
-                          value={order.status || 'pending'}
-                          onValueChange={(status) => updateOrderStatusMutation.mutate({ id: order.id, status })}
-                        >
-                          <SelectTrigger className="w-32">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="pending">قيد الانتظار</SelectItem>
-                            <SelectItem value="confirmed">تم التأكيد</SelectItem>
-                            <SelectItem value="delivered">تم التوصيل</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-1">{order.customer_phone}</p>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        <MapPin className="w-3 h-3 inline ml-1" />
-                        {order.village_name || order.customer_city}
-                        {order.district_name && ` - ${order.district_name}`}
-                      </p>
-                      <div className="text-sm mb-2">
-                        {items?.map((item, i) => (
-                          <span key={i}>
-                            {item.name} {item.size && `(${item.size})`} × {item.quantity}
-                            {i < items.length - 1 && '، '}
-                          </span>
-                        ))}
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-bold text-primary">{order.total_amount} ج.م</p>
-                          <p className="text-xs text-muted-foreground">
-                            توصيل: {order.delivery_fee} ج.م
-                          </p>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(order.created_at || '').toLocaleString('ar-EG')}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-center text-muted-foreground py-8">لا توجد طلبات</p>
-            )}
-          </div>
-        )}
+        {activeTab === 'orders' && <AdminOrders />}
       </div>
 
       {/* District Modal */}

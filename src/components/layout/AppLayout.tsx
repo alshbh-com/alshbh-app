@@ -2,6 +2,7 @@ import { ReactNode, useState } from 'react';
 import { AppHeader } from './AppHeader';
 import { BottomNav } from './BottomNav';
 import { SideDrawer } from './SideDrawer';
+import { AnnouncementBanner } from '@/components/home/AnnouncementBanner';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -26,6 +27,8 @@ export const AppLayout = ({
           onMenuClick={() => setDrawerOpen(true)}
         />
       )}
+      {/* Global announcements shown on all pages */}
+      <AnnouncementBanner globalOnly />
       <main className={showNav ? 'pb-nav' : ''}>{children}</main>
       {showNav && <BottomNav />}
       <SideDrawer open={drawerOpen} onOpenChange={setDrawerOpen} />

@@ -9,14 +9,12 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// Fetch restaurants (sub_categories)
 const fetchRestaurants = async () => {
   const { data, error } = await supabase
     .from('sub_categories')
     .select('*')
     .eq('is_active', true)
     .order('sort_order', { ascending: true });
-
   if (error) throw error;
   return data;
 };
@@ -27,18 +25,10 @@ const Index = () => {
     queryFn: fetchRestaurants,
   });
 
-  const announcements = [
-    {
-      id: 'express-partnership',
-      message: '🚚 يوم 8/2/2026 سيتم التعاقد مع اكس بريس كخدمة التوصيل المتاحة للمنصة!',
-      type: 'info' as const,
-    },
-  ];
-
   return (
     <AppLayout showSearch={false}>
-      {/* Announcements */}
-      <AnnouncementBanner announcements={announcements} />
+      {/* Announcements from DB */}
+      <AnnouncementBanner />
 
       {/* Hero Banner */}
       <HeroBanner />
