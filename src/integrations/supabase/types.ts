@@ -38,6 +38,42 @@ export type Database = {
         }
         Relationships: []
       }
+      announcements: {
+        Row: {
+          created_at: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          message: string
+          show_on_all_pages: boolean | null
+          sort_order: number | null
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          message: string
+          show_on_all_pages?: boolean | null
+          sort_order?: number | null
+          type?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          message?: string
+          show_on_all_pages?: boolean | null
+          sort_order?: number | null
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       app_8cb156cd99_app_settings: {
         Row: {
           app_is_open: boolean | null
