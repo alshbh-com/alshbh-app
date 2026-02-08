@@ -1,8 +1,9 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Megaphone, Sparkles } from 'lucide-react';
+import { X, Megaphone, Sparkles, ArrowLeft } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
 
 interface AnnouncementBannerProps {
   globalOnly?: boolean;
@@ -11,6 +12,7 @@ interface AnnouncementBannerProps {
 export const AnnouncementBanner = ({ globalOnly = false }: AnnouncementBannerProps) => {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [currentIndex, setCurrentIndex] = useState(0);
+  const navigate = useNavigate();
 
   const { data: announcements } = useQuery({
     queryKey: ['announcements', globalOnly],
@@ -96,7 +98,7 @@ export const AnnouncementBanner = ({ globalOnly = false }: AnnouncementBannerPro
                 />
               </motion.div>
 
-              {/* Text */}
+              {/* Text + CTA */}
               <div className="flex-1 text-center">
                 <motion.p
                   className="text-white font-bold text-sm md:text-base leading-relaxed drop-shadow-md"
@@ -117,6 +119,20 @@ export const AnnouncementBanner = ({ globalOnly = false }: AnnouncementBannerPro
                   <span className="inline-block w-8 h-0.5 bg-yellow-300/60 rounded-full" />
                 </motion.div>
               </div>
+
+              {/* Learn More Button */}
+              <motion.button
+                onClick={() => navigate('/express-partnership')}
+                className="flex-shrink-0 flex items-center gap-1 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white text-xs font-bold px-3 py-1.5 rounded-full border border-white/30 transition-colors"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+              >
+                اعرف أكتر
+                <ArrowLeft className="w-3 h-3" />
+              </motion.button>
             </div>
 
             {/* Dismiss */}

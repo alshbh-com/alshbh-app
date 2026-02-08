@@ -3,7 +3,7 @@ import { HeroBanner } from '@/components/home/HeroBanner';
 import { CategoryCard } from '@/components/home/CategoryCard';
 import { QuickCategories } from '@/components/home/QuickCategories';
 import { ExclusiveOffers } from '@/components/home/ExclusiveOffers';
-import { AnnouncementBanner } from '@/components/home/AnnouncementBanner';
+
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,8 +27,7 @@ const Index = () => {
 
   return (
     <AppLayout showSearch={false}>
-      {/* Announcements from DB */}
-      <AnnouncementBanner />
+      {/* Announcements handled globally by AppLayout */}
 
       {/* Hero Banner */}
       <HeroBanner />

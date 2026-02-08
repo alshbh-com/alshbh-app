@@ -28,6 +28,7 @@ import Terms from "./pages/Terms";
 import EditProfile from "./pages/EditProfile";
 import MyStats from "./pages/MyStats";
 import About from "./pages/About";
+import ExpressPartnership from "./pages/ExpressPartnership";
 import OrderTracking from "./pages/OrderTracking";
 import RestaurantPanel from "./pages/RestaurantPanel";
 
@@ -70,6 +71,7 @@ const App = () => (
           <Route path="/edit-profile" element={<EditProfile />} />
           <Route path="/my-stats" element={<MyStats />} />
           <Route path="/about" element={<About />} />
+          <Route path="/express-partnership" element={<ExpressPartnership />} />
           <Route path="/track-order" element={<OrderTracking />} />
           <Route path="/track-order/:orderNumber" element={<OrderTracking />} />
           <Route path="/restaurant-panel" element={<RestaurantPanel />} />
