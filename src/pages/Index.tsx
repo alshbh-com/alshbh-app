@@ -3,6 +3,7 @@ import { HeroBanner } from '@/components/home/HeroBanner';
 import { CategoryCard } from '@/components/home/CategoryCard';
 import { QuickCategories } from '@/components/home/QuickCategories';
 import { ExclusiveOffers } from '@/components/home/ExclusiveOffers';
+import { AnnouncementBanner } from '@/components/home/AnnouncementBanner';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,8 +27,19 @@ const Index = () => {
     queryFn: fetchRestaurants,
   });
 
+  const announcements = [
+    {
+      id: 'express-partnership',
+      message: '🚚 يوم 8/2/2026 سيتم التعاقد مع اكس بريس كخدمة التوصيل المتاحة للمنصة!',
+      type: 'info' as const,
+    },
+  ];
+
   return (
     <AppLayout showSearch={false}>
+      {/* Announcements */}
+      <AnnouncementBanner announcements={announcements} />
+
       {/* Hero Banner */}
       <HeroBanner />
 
