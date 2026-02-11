@@ -973,11 +973,13 @@ export type Database = {
           district_id: string | null
           district_name: string | null
           id: string
+          internal_notes: string | null
           items: Json
           order_number: number
           platform_fee: number | null
           shared_code: string | null
           status: string | null
+          status_updated_at: string | null
           sub_category_id: string | null
           total_amount: number
           village_id: string | null
@@ -996,11 +998,13 @@ export type Database = {
           district_id?: string | null
           district_name?: string | null
           id?: string
+          internal_notes?: string | null
           items: Json
           order_number?: number
           platform_fee?: number | null
           shared_code?: string | null
           status?: string | null
+          status_updated_at?: string | null
           sub_category_id?: string | null
           total_amount: number
           village_id?: string | null
@@ -1019,11 +1023,13 @@ export type Database = {
           district_id?: string | null
           district_name?: string | null
           id?: string
+          internal_notes?: string | null
           items?: Json
           order_number?: number
           platform_fee?: number | null
           shared_code?: string | null
           status?: string | null
+          status_updated_at?: string | null
           sub_category_id?: string | null
           total_amount?: number
           village_id?: string | null

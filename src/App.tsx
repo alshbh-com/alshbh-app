@@ -31,6 +31,7 @@ import About from "./pages/About";
 import ExpressPartnership from "./pages/ExpressPartnership";
 import OrderTracking from "./pages/OrderTracking";
 import RestaurantPanel from "./pages/RestaurantPanel";
+import OrderSuccess from "./pages/OrderSuccess";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -55,6 +56,7 @@ const App = () => (
           <Route path="/select-location" element={<DistrictSelection />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
+          <Route path="/order-success" element={<OrderSuccess />} />
           <Route path="/restaurants" element={<Restaurants />} />
           <Route path="/restaurant/:id" element={<RestaurantDetails />} />
           <Route path="/favorites" element={<Favorites />} />
