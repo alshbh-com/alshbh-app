@@ -179,17 +179,9 @@ const Checkout = () => {
       message += `📦 *رسوم المنصة (${itemCount === 1 ? 'قطعة واحدة' : `${itemCount} قطع`}):* ${platformFee} ج.م\n`;
       message += `💵 *الإجمالي:* ${total} ج.م`;
 
-      // Order already saved above, proceed with WhatsApp
-
-      // Open WhatsApp - use district whatsapp number or fallback to default
-      const whatsappNumber = savedLocation.district.whatsappNumber || '201278006248';
-      const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
-      window.open(whatsappUrl, '_blank');
-
-      // Clear cart and redirect
+      // Clear cart and show thank you
       clearCart();
-      toast.success('تم إرسال الطلب بنجاح!');
-      navigate('/orders');
+      navigate('/order-success', { state: { orderNumber } });
     } catch (error) {
       console.error('Error:', error);
       toast.error('حدث خطأ أثناء إرسال الطلب');
